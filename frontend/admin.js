@@ -1,36 +1,84 @@
+const status = document.getElementById("status");
+const library = document.getElementById("bg-library");
 const form = document.getElementById("upload-form");
 const fileInput = document.getElementById("file");
 const fileLabel = document.getElementById("file-label");
-const status = document.getElementById("status");
-const preview = document.getElementById("preview");
-const noBg = document.getElementById("no-bg");
-const clearBtn = document.getElementById("clear-bg");
 
 function setStatus(text, kind = "") {
   status.textContent = text;
   status.className = kind;
 }
 
-function refreshPreview(version) {
-  const v = version ?? Date.now();
-  const probe = new Image();
-  probe.onload = () => {
-    preview.src = probe.src;
-    preview.hidden = false;
-    noBg.hidden = true;
-  };
-  probe.onerror = () => {
-    preview.hidden = true;
-    noBg.hidden = false;
-  };
-  probe.src = `/background?v=${v}`;
+async function refreshLibrary() {
+  try {
+    const r = await fetch("/api/backgrounds", { cache: "no-store" });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const items = await r.json();
+    if (items.length === 0) {
+      library.innerHTML = `<p class="empty">Ingen bakgrunner enda. Last opp et bilde under.</p>`;
+      return;
+    }
+    library.innerHTML = items.map((b) => `
+      <div class="bg-card ${b.current ? "current" : ""}" data-id="${b.id}">
+        <button class="thumb" data-action="use" aria-label="${b.current ? "Aktiv bakgrunn" : "Sett som aktiv"}">
+          <img src="${b.url}" alt="">
+          ${b.current ? `<span class="badge">Aktiv</span>` : ""}
+        </button>
+        <div class="actions">
+          ${b.current
+            ? `<button class="use" disabled>Aktiv</button>`
+            : `<button class="use" data-action="use">Bruk</button>`}
+          <button class="delete" data-action="delete" aria-label="Slett">×</button>
+        </div>
+      </div>
+    `).join("");
+  } catch (err) {
+    library.innerHTML = `<p class="error">Kunne ikke laste bakgrunner: ${err.message}</p>`;
+  }
 }
 
-refreshPreview();
+library.addEventListener("click", async (e) => {
+  const card = e.target.closest(".bg-card");
+  if (!card) return;
+  const id = card.dataset.id;
+  const action = e.target.closest("[data-action]")?.dataset?.action;
+  if (!action) return;
+
+  if (action === "use") {
+    if (card.classList.contains("current")) return;
+    setStatus("Setter aktiv bakgrunn…");
+    try {
+      const r = await fetch("/api/backgrounds/use", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      setStatus("Lagret.", "ok");
+      refreshLibrary();
+    } catch (err) {
+      setStatus(`Feilet: ${err.message}`, "err");
+    }
+  } else if (action === "delete") {
+    if (!confirm("Slette dette bildet?")) return;
+    setStatus("Sletter…");
+    try {
+      const r = await fetch("/admin/background/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      setStatus("Slettet.", "ok");
+      refreshLibrary();
+    } catch (err) {
+      setStatus(`Feilet: ${err.message}`, "err");
+    }
+  }
+});
 
 fileInput.addEventListener("change", () => {
-  const f = fileInput.files[0];
-  fileLabel.textContent = f ? f.name : "Velg bilde…";
+  fileLabel.textContent = fileInput.files[0]?.name ?? "Velg bilde…";
 });
 
 form.addEventListener("submit", async (e) => {
@@ -46,25 +94,13 @@ form.addEventListener("submit", async (e) => {
       const text = await r.text();
       throw new Error(text || `HTTP ${r.status}`);
     }
-    const data = await r.json();
     setStatus("Lastet opp.", "ok");
-    refreshPreview(data.version);
     fileInput.value = "";
     fileLabel.textContent = "Velg bilde…";
+    refreshLibrary();
   } catch (err) {
     setStatus(`Feilet: ${err.message}`, "err");
   }
 });
 
-clearBtn.addEventListener("click", async () => {
-  if (!confirm("Fjerne bakgrunn?")) return;
-  setStatus("Fjerner…");
-  try {
-    const r = await fetch("/admin/background/clear", { method: "POST" });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    setStatus("Fjernet.", "ok");
-    refreshPreview();
-  } catch (err) {
-    setStatus(`Feilet: ${err.message}`, "err");
-  }
-});
+refreshLibrary();

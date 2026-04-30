@@ -6,6 +6,7 @@ Serves the kiosk frontend, an admin UI, and a small power API on port 8080.
 - /api/shutdown and /api/reboot are accepted only from 127.0.0.1.
 - /admin and /admin/* require HTTP basic auth (see ADMIN_PW_FILE).
 """
+import io
 import logging
 import secrets
 import subprocess
@@ -13,6 +14,7 @@ import time
 from pathlib import Path
 
 from flask import Flask, Response, abort, jsonify, request, send_from_directory
+from PIL import Image, ImageOps
 
 ROOT = Path(__file__).resolve().parent.parent
 FRONTEND = ROOT / "frontend"
@@ -27,7 +29,9 @@ ADMIN_PW_FILE = Path.home() / ".asipad-admin-password"
 DEFAULT_ADMIN_PASSWORD = "asipad"
 
 ALLOWED_BG = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
-MAX_UPLOAD_BYTES = 8 * 1024 * 1024  # 8 MiB
+MAX_UPLOAD_BYTES = 16 * 1024 * 1024  # 16 MiB before resize
+MAX_BG_DIM = (1280, 720)             # display resolution; larger doesn't help cog
+WEBP_QUALITY = 78
 
 
 def _migrate_legacy_bg() -> None:
@@ -102,6 +106,19 @@ def list_backgrounds():
     )
 
 
+def _normalize_bg(file_storage) -> bytes:
+    """Read an uploaded image, fix orientation, downscale to MAX_BG_DIM,
+    re-encode to WebP. Keeps the kiosk's decoded RAM footprint bounded."""
+    img = Image.open(file_storage.stream)
+    img = ImageOps.exif_transpose(img)
+    if img.mode not in ("RGB", "RGBA"):
+        img = img.convert("RGB")
+    img.thumbnail(MAX_BG_DIM, Image.LANCZOS)
+    buf = io.BytesIO()
+    img.save(buf, format="WEBP", quality=WEBP_QUALITY, method=4)
+    return buf.getvalue()
+
+
 @app.route("/")
 def index():
     # Inline CSS + JS into the HTML so a cold load is one HTTP request
@@ -138,12 +155,21 @@ def admin_upload_bg():
     ext = Path(file.filename).suffix.lower()
     if ext not in ALLOWED_BG:
         return jsonify(error=f"extension {ext} not allowed"), 400
+    try:
+        data = _normalize_bg(file)
+    except Exception as e:
+        return jsonify(error=f"could not process image: {e}"), 400
     BG_DIR.mkdir(exist_ok=True)
-    name = f"{int(time.time())}{ext}"
+    name = f"{int(time.time())}.webp"
     target = BG_DIR / name
-    file.save(target)
+    target.write_bytes(data)
     CURRENT_BG_FILE.write_text(name)
-    return jsonify(ok=True, version=int(target.stat().st_mtime), id=name)
+    return jsonify(
+        ok=True,
+        version=int(target.stat().st_mtime),
+        id=name,
+        bytes=len(data),
+    )
 
 
 @app.post("/admin/background/clear")
