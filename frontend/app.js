@@ -4,7 +4,7 @@ const PAGES = {
   bilder:   { title: "Bilder",   body: comingSoon },
   musikk:   { title: "Musikk",   body: comingSoon },
   lese:     { title: "Lese",     body: comingSoon },
-  spill:    { title: "Spill",    body: comingSoon },
+  spill:    { title: "Spill",    body: gameBody, fullbleed: true, url: "https://opentd2.rykroken.net/" },
 };
 
 const $ = (s) => document.querySelector(s);
@@ -14,11 +14,18 @@ const pageTitle = $("#page-title");
 const pageBody = $("#page-body");
 
 function fmtDate(d) {
-  return d.toLocaleDateString("nb-NO", { weekday: "long", day: "numeric", month: "long" });
+  // e.g. "torsdag 30. april 2026" → "torsdag 30 april 2026" (CSS uppercases it).
+  return d.toLocaleDateString("nb-NO", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric"
+  }).replace(/\./g, "");
 }
 
 function comingSoon() {
   return `<div>Kommer snart!</div>`;
+}
+
+function gameBody() {
+  return `<iframe src="${PAGES.spill.url}" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
 }
 
 function calendarBody() {
@@ -55,6 +62,7 @@ function showPage(id) {
   if (!def) return showHome();
   pageTitle.textContent = def.title;
   pageBody.innerHTML = def.body();
+  pageBody.classList.toggle("fullbleed", !!def.fullbleed);
   home.classList.add("hidden");
   page.classList.remove("hidden");
   if (location.hash !== `#/${id}`) {
