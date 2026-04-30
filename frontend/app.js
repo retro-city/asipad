@@ -54,29 +54,48 @@ function eventsForDate(d) {
   return EVENTS.filter((e) => e.match(d));
 }
 
+let calendarDate = null;
+
 function calendarBody() {
-  const now = new Date();
-  const weekday = now.toLocaleDateString("nb-NO", { weekday: "long" });
-  const month = now.toLocaleDateString("nb-NO", { month: "long" });
-  const events = eventsForDate(now);
+  const d = calendarDate ?? new Date();
+  const weekday = d.toLocaleDateString("nb-NO", { weekday: "long" });
+  const month = d.toLocaleDateString("nb-NO", { month: "long" });
+  const events = eventsForDate(d);
+  const isToday = sameYMD(d, new Date());
   const eventsHtml = events.length
     ? events.map((e) => `
         <div class="event">
           <div class="event-icon">${EVENT_ICONS[e.icon] ?? ""}</div>
           <div class="event-label">${e.label}</div>
         </div>`).join("")
-    : `<div class="no-events">Ingen avtaler i dag</div>`;
+    : `<div class="no-events">${isToday ? "Ingen avtaler i dag" : "Ingen avtaler"}</div>`;
 
   return `<div class="calendar-split">
+    <button class="cal-nav" data-action="prev" aria-label="Forrige dag">‹</button>
     <div class="calendar-day calendar-big">
       <div class="weekday">${weekday}</div>
-      <div class="day">${now.getDate()}</div>
+      <div class="day">${d.getDate()}</div>
       <div class="month">${month}</div>
     </div>
     <div class="calendar-events">
       ${eventsHtml}
     </div>
+    <button class="cal-nav" data-action="next" aria-label="Neste dag">›</button>
   </div>`;
+}
+
+function sameYMD(a, b) {
+  return a.getFullYear() === b.getFullYear()
+      && a.getMonth() === b.getMonth()
+      && a.getDate() === b.getDate();
+}
+
+function shiftCalendar(days) {
+  const base = calendarDate ?? new Date();
+  const next = new Date(base);
+  next.setDate(next.getDate() + days);
+  calendarDate = next;
+  pageBody.innerHTML = calendarBody();
 }
 
 function updateCalendarTile() {
@@ -100,6 +119,7 @@ function showHome() {
 function showPage(id) {
   const def = PAGES[id];
   if (!def) return showHome();
+  if (id === "kalender") calendarDate = null; // reset to today on each entry
   pageTitle.textContent = def.title;
   pageBody.innerHTML = def.body();
   pageBody.classList.toggle("fullbleed", !!def.fullbleed);
@@ -118,7 +138,10 @@ document.querySelectorAll(".tile").forEach((el) => {
 });
 
 pageBody.addEventListener("click", (e) => {
-  if (e.target?.classList?.contains("start-game")) loadGameIframe();
+  if (e.target?.classList?.contains("start-game")) return loadGameIframe();
+  const action = e.target?.closest?.("[data-action]")?.dataset?.action;
+  if (action === "prev") shiftCalendar(-1);
+  else if (action === "next") shiftCalendar(1);
 });
 
 $("#back").addEventListener("click", showHome);
