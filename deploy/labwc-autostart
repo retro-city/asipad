@@ -14,13 +14,6 @@ unset XDG_CONFIG_HOME
 # (via wp_text_input_v3); stays hidden otherwise.
 wvkbd-mobintl --hidden -L 240 -H 0 &
 
-# Idle blanking: after 30 s with no touch/keyboard activity, power the
-# HDMI output off (DPMS-off — kills the backlight on most panels). On
-# any activity (touch counts), bring it back. Saves battery on idle.
-swayidle -w \
-  timeout 30 'wlr-randr --output HDMI-A-1 --off' \
-  resume     'wlr-randr --output HDMI-A-1 --on'  &
-
 # Wait for the local kiosk server, then launch cog in a respawn loop.
 # The loop dies when *this* labwc instance dies — prevents stale loops
 # stacking up across service restarts.
