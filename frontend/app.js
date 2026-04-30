@@ -507,16 +507,12 @@ function buildOsk() {
   oskEl.className = "osk hidden";
   document.body.appendChild(oskEl);
   renderOsk();
-  // Block focus from leaving the input when the user taps a key.
+  // Don't let pointerdown on the keyboard blur the input.
   oskEl.addEventListener("pointerdown", (e) => e.preventDefault());
-  oskEl.addEventListener("mousedown",   (e) => e.preventDefault());
-  oskEl.addEventListener("touchstart",  (e) => e.preventDefault(), { passive: false });
   oskEl.addEventListener("pointerup", (e) => {
     const btn = e.target.closest(".osk-key");
     if (!btn) return;
     handleOskKey(btn.dataset.key);
-    // Belt-and-suspenders: ensure the input still has focus.
-    if (oskTarget) oskTarget.focus();
   });
 }
 
@@ -524,13 +520,13 @@ function renderOsk() {
   const rows = oskShift ? OSK_UPPER : OSK_LOWER;
   const grid = rows.map((row) =>
     `<div class="osk-row">${row.map((k) =>
-      `<button type="button" tabindex="-1" class="osk-key ${oskClass(k)}" data-key="${k}">${k}</button>`
+      `<button type="button" class="osk-key ${oskClass(k)}" data-key="${k}">${k}</button>`
     ).join("")}</div>`
   ).join("");
   const bottom = `
     <div class="osk-row">
-      <button type="button" tabindex="-1" class="osk-key osk-hide" data-key="hide">▾</button>
-      <button type="button" tabindex="-1" class="osk-key osk-space" data-key=" ">space</button>
+      <button type="button" class="osk-key osk-hide" data-key="hide">▾</button>
+      <button type="button" class="osk-key osk-space" data-key=" ">space</button>
     </div>`;
   oskEl.innerHTML = grid + bottom;
 }
@@ -605,9 +601,8 @@ document.addEventListener("focusout", () => {
   // give the keyboard a moment to refocus the input on tap
   setTimeout(() => {
     const a = document.activeElement;
-    if (oskEl && oskEl.contains(a)) return;          // focus inside keyboard, ignore
     if (!a || (a.tagName !== "INPUT" && a.tagName !== "TEXTAREA")) hideOsk();
-  }, 120);
+  }, 80);
 });
 
 // Background + version polling: reload kiosk on frontend changes,
