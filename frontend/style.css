@@ -520,59 +520,6 @@ header h1 {
 .jobb-save:active,
 .jobb-delete:active { transform: scale(0.97); }
 
-/* On-screen keyboard (in-page) */
-.osk {
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
-  z-index: 100;
-  background: rgba(20, 25, 40, 0.96);
-  padding: 1vh 1vw;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6vh;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.45);
-}
-
-.osk.hidden { display: none; }
-
-/* When the keyboard is open, push pages up so inputs aren't hidden under it. */
-body.osk-open .view { padding-bottom: 38vh; }
-
-.osk-row {
-  display: flex;
-  gap: 0.7vw;
-  flex: 1;
-}
-
-.osk-key {
-  flex: 1;
-  font-size: 3.2vw;
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.10);
-  color: var(--fg);
-  border: none;
-  border-radius: 1.2vw;
-  padding: 1.6vh 0;
-  cursor: pointer;
-  font-family: inherit;
-  min-width: 0;
-}
-
-.osk-key:active { background: rgba(255, 255, 255, 0.22); transform: scale(0.96); }
-
-.osk-key.osk-back,
-.osk-key.osk-enter,
-.osk-key.osk-shift,
-.osk-key.osk-hide  { background: rgba(255, 184, 77, 0.18); flex: 1.4; }
-
-.osk-key.osk-shift.active { background: rgba(255, 184, 77, 0.45); color: #1a1a1a; }
-
-.osk-key.osk-space { flex: 9; }
-.osk-key.osk-hide  { flex: 1.4; }
-
 .page-body.fullbleed {
   padding: 0;
   background: #000;
