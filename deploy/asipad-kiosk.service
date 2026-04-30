@@ -29,13 +29,19 @@ UtmpMode=user
 # own localhost content, so the sandbox is dead weight here.
 Environment=WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
 
-# Wait for the local kiosk server before bringing up the display.
+# Point labwc at our system-wide config (autostart + rc.xml) under
+# /etc/asipad/labwc. The autostart unsets this so cog/wvkbd write to
+# $HOME/.config like normal.
+Environment=XDG_CONFIG_HOME=/etc/asipad
+
+# Wait for the local kiosk server before bringing up the compositor.
 ExecStartPre=/bin/sh -c 'until curl -fsS http://127.0.0.1:8080/api/health > /dev/null 2>&1; do sleep 0.5; done'
 
-# cage = single-window Wayland compositor.
-# cog = WPE-WebKit kiosk browser.
-# Together they replace lightdm + labwc + Firefox at a fraction of the RAM cost.
-ExecStart=/usr/bin/cage -s -- /usr/bin/cog http://127.0.0.1:8080/
+# labwc owns the display; its autostart launches wvkbd (on-screen keyboard,
+# auto-shown via wp_text_input_v3) and cog -F (fullscreen WPE-WebKit kiosk).
+# We use labwc instead of cage because cage doesn't expose wlr_layer_shell,
+# which wvkbd needs to render the keyboard as an overlay.
+ExecStart=/usr/bin/labwc
 
 Restart=always
 RestartSec=3

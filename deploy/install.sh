@@ -13,7 +13,7 @@ fi
 echo "==> apt packages"
 sudo apt-get update -qq
 sudo apt-get install -y --no-install-recommends \
-  python3-flask python3-pil curl zram-tools cage cog
+  python3-flask python3-pil curl zram-tools cage cog wvkbd
 
 echo "==> zram swap (compressed RAM-backed swap, faster than SD)"
 # zram-tools enables a default zram swap device on boot. Sized at 50% of RAM
@@ -40,6 +40,15 @@ echo "==> sudoers fragment"
 sudo install -m 0440 -o root -g root \
   deploy/sudoers-kiosk /etc/sudoers.d/asipad-kiosk
 sudo visudo -cf /etc/sudoers.d/asipad-kiosk >/dev/null
+
+echo "==> labwc kiosk config (compositor for cog + wvkbd)"
+sudo install -d -m 0755 /etc/asipad/labwc
+sudo install -m 0755 deploy/labwc-autostart /etc/asipad/labwc/autostart
+sudo install -m 0644 deploy/labwc-rc.xml /etc/asipad/labwc/rc.xml
+# Clean up any stale per-user labwc autostart left over from earlier setups.
+rm -f "$HOME/.config/labwc/autostart"
+# Old cage runner script (no longer used).
+sudo rm -f /usr/local/bin/asipad-kiosk-runner
 
 echo "==> systemd units"
 sudo install -m 0644 \

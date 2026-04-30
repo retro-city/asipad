@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+  <touch deviceName="Chalkboard Electronics HID Touchscreen" mapToOutput="HDMI-A-1" mouseEmulation="yes"/>
+
+  <!-- Auto-fullscreen every window. Only the kiosk browser ever runs here, so
+       this gives us iPad-like behavior without cog having a fullscreen flag. -->
+  <windowRules>
+    <windowRule identifier="*" matchOnce="false">
+      <serverDecoration>no</serverDecoration>
+      <skipTaskbar>yes</skipTaskbar>
+      <skipWindowSwitcher>yes</skipWindowSwitcher>
+      <action name="ToggleFullscreen"/>
+    </windowRule>
+  </windowRules>
+</openbox_config>

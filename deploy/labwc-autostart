@@ -1,0 +1,30 @@
+#!/bin/sh
+# Asipad labwc autostart. Sourced by labwc when launched with
+# XDG_CONFIG_HOME=/etc/asipad. Brings up the on-screen keyboard and the
+# kiosk browser; pinned to the current labwc PID so a service restart
+# doesn't leave a stale loop alive.
+
+# Hide cursor (kid uses touch).
+unclutter -idle 0 -root &
+
+# Children write their state under $HOME/.config, not /etc/asipad.
+unset XDG_CONFIG_HOME
+
+# Wayland on-screen keyboard. Auto-shows when an input field gets focus
+# (via wp_text_input_v3); stays hidden otherwise.
+wvkbd-mobintl --hidden -L 240 -H 0 &
+
+# Wait for the local kiosk server, then launch cog in a respawn loop.
+# The loop dies when *this* labwc instance dies — prevents stale loops
+# stacking up across service restarts.
+LABWC_PID=$(pidof labwc | awk '{print $1}')
+(
+  while [ -n "$LABWC_PID" ] && [ -e "/proc/$LABWC_PID" ]; do
+    for _ in $(seq 1 60); do
+      curl -fsS http://127.0.0.1:8080/api/health >/dev/null 2>&1 && break
+      sleep 0.5
+    done
+    cog http://127.0.0.1:8080/
+    sleep 1
+  done
+) &
