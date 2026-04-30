@@ -25,7 +25,13 @@ function comingSoon() {
 }
 
 function gameBody() {
-  return `<iframe src="${PAGES.spill.url}" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
+  // Two-step gate so the heavy game iframe only loads after an explicit tap
+  // — keeps the home view snappy and lets "Tilbake" actually free the renderer.
+  return `<button class="start-game" type="button">Start spill</button>`;
+}
+
+function loadGameIframe() {
+  pageBody.innerHTML = `<iframe src="${PAGES.spill.url}" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
 }
 
 function calendarBody() {
@@ -75,6 +81,10 @@ document.querySelectorAll(".tile").forEach((el) => {
     const route = el.dataset.route;
     if (route) showPage(route);
   });
+});
+
+pageBody.addEventListener("click", (e) => {
+  if (e.target?.classList?.contains("start-game")) loadGameIframe();
 });
 
 $("#back").addEventListener("click", showHome);

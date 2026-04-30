@@ -175,6 +175,21 @@ header h1 {
   background: #000;
 }
 
+.page-body .start-game {
+  font-size: 4vw;
+  font-weight: 600;
+  padding: 3vw 6vw;
+  border: none;
+  border-radius: 2vw;
+  background: var(--accent);
+  color: #1a1a1a;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.page-body .start-game:active { transform: scale(0.97); }
+
 .calendar-big {
   line-height: 1.15;
   text-transform: uppercase;
