@@ -1,6 +1,6 @@
 const PAGES = {
   kalender:      { title: "Kalender",      body: calendarBody },
-  lese:          { title: "Lese",          body: comingSoon },
+  lese:          { title: "Lese",          body: leseBody },
   skrive:        { title: "Skrive",        body: comingSoon },
   tall:          { title: "Tall",          body: comingSoon },
   jobb:          { title: "Jobb",          body: jobbBody },
@@ -24,6 +24,18 @@ function fmtDate(d) {
 function comingSoon() {
   return `<div>Kommer snart!</div>`;
 }
+
+function leseBody() {
+  // Reading-practice text. Update LESE_LINES below to change.
+  return `<div class="lese-content">${LESE_LINES.map((l) => `<p>${l}</p>`).join("")}</div>`;
+}
+
+const LESE_LINES = [
+  "HEI!",
+  "VI ER VELDIG GLAD I DEG.",
+  "DU ER VELDIG FLINK Å LESE.",
+  "DU KAN LESE KATT, MUS, HUND OG TIGER.",
+];
 
 function gameBody() {
   // Two-step gate so the heavy game iframe only loads after an explicit tap

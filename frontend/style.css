@@ -607,6 +607,25 @@ body.osk-open .view { padding-bottom: 38vh; }
   letter-spacing: 0.03em;
 }
 
+.lese-content {
+  width: 100%;
+  text-align: center;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.lese-content p {
+  margin: 1.2vh 0;
+  font-size: 4vw;
+}
+
+.lese-content p:first-child {
+  font-size: 6vw;
+  color: var(--accent);
+  margin-bottom: 3vh;
+}
+
 .calendar-big .weekday { font-size: 4.5vw; font-weight: 600; opacity: 0.85; }
 .calendar-big .day { font-size: 18vw; font-weight: 800; line-height: 1; margin: 0.5vh 0; color: var(--accent); }
 .calendar-big .month { font-size: 4vw; }
