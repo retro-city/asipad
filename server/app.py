@@ -17,7 +17,10 @@ from flask import Flask, Response, abort, jsonify, request, send_from_directory
 ROOT = Path(__file__).resolve().parent.parent
 FRONTEND = ROOT / "frontend"
 DATA = ROOT / "data"
+BG_DIR = DATA / "bg"
+CURRENT_BG_FILE = DATA / "current-bg.txt"
 DATA.mkdir(exist_ok=True)
+BG_DIR.mkdir(exist_ok=True)
 INDEX = FRONTEND / "index.html"
 
 ADMIN_PW_FILE = Path.home() / ".asipad-admin-password"
@@ -25,6 +28,25 @@ DEFAULT_ADMIN_PASSWORD = "asipad"
 
 ALLOWED_BG = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 MAX_UPLOAD_BYTES = 8 * 1024 * 1024  # 8 MiB
+
+
+def _migrate_legacy_bg() -> None:
+    """Move pre-library background.<ext> into data/bg/ on first run."""
+    legacy = sorted(DATA.glob("background.*"))
+    if not legacy:
+        return
+    src = legacy[0]
+    ts = int(src.stat().st_mtime)
+    dst = BG_DIR / f"{ts}{src.suffix.lower()}"
+    if not dst.exists():
+        src.rename(dst)
+        CURRENT_BG_FILE.write_text(dst.name)
+    # Clean up any duplicates
+    for extra in legacy[1:]:
+        extra.unlink(missing_ok=True)
+
+
+_migrate_legacy_bg()
 
 app = Flask(__name__, static_folder=None)
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES + 4096
@@ -61,8 +83,23 @@ def require_local():
 
 
 def current_background():
-    files = sorted(DATA.glob("background.*"))
-    return files[0] if files else None
+    if not CURRENT_BG_FILE.exists():
+        return None
+    name = CURRENT_BG_FILE.read_text().strip()
+    if not name:
+        return None
+    p = BG_DIR / name
+    return p if p.exists() and p.is_file() else None
+
+
+def list_backgrounds():
+    if not BG_DIR.exists():
+        return []
+    return sorted(
+        (f for f in BG_DIR.iterdir() if f.is_file() and f.suffix.lower() in ALLOWED_BG),
+        key=lambda f: f.stat().st_mtime,
+        reverse=True,
+    )
 
 
 @app.route("/")
@@ -101,19 +138,39 @@ def admin_upload_bg():
     ext = Path(file.filename).suffix.lower()
     if ext not in ALLOWED_BG:
         return jsonify(error=f"extension {ext} not allowed"), 400
-    for old in DATA.glob("background.*"):
-        old.unlink(missing_ok=True)
-    target = DATA / f"background{ext}"
+    BG_DIR.mkdir(exist_ok=True)
+    name = f"{int(time.time())}{ext}"
+    target = BG_DIR / name
     file.save(target)
-    return jsonify(ok=True, version=int(target.stat().st_mtime))
+    CURRENT_BG_FILE.write_text(name)
+    return jsonify(ok=True, version=int(target.stat().st_mtime), id=name)
 
 
 @app.post("/admin/background/clear")
 def admin_clear_bg():
     if (resp := require_admin()) is not None:
         return resp
-    for old in DATA.glob("background.*"):
-        old.unlink(missing_ok=True)
+    if CURRENT_BG_FILE.exists():
+        CURRENT_BG_FILE.unlink()
+    return jsonify(ok=True)
+
+
+@app.post("/admin/background/delete")
+def admin_delete_bg():
+    if (resp := require_admin()) is not None:
+        return resp
+    body = request.get_json(silent=True) or {}
+    name = body.get("id", "")
+    if not name or "/" in name or ".." in name:
+        return jsonify(error="bad id"), 400
+    p = BG_DIR / name
+    if not p.is_file():
+        return jsonify(error="not found"), 404
+    p.unlink()
+    cur = current_background()
+    if cur is None or cur.name == name:
+        if CURRENT_BG_FILE.exists():
+            CURRENT_BG_FILE.unlink()
     return jsonify(ok=True)
 
 
@@ -122,7 +179,43 @@ def background():
     bg = current_background()
     if bg is None:
         return ("", 204)
-    return send_from_directory(DATA, bg.name, max_age=0)
+    return send_from_directory(BG_DIR, bg.name, max_age=0)
+
+
+@app.get("/api/backgrounds")
+def api_backgrounds():
+    cur = current_background()
+    cur_name = cur.name if cur else None
+    items = []
+    for f in list_backgrounds():
+        mtime = int(f.stat().st_mtime)
+        items.append({
+            "id": f.name,
+            "url": f"/api/backgrounds/{f.name}?v={mtime}",
+            "current": f.name == cur_name,
+            "mtime": mtime,
+        })
+    return jsonify(items)
+
+
+@app.get("/api/backgrounds/<name>")
+def api_background_file(name):
+    if "/" in name or ".." in name:
+        abort(400)
+    return send_from_directory(BG_DIR, name, max_age=0)
+
+
+@app.post("/api/backgrounds/use")
+def api_set_background():
+    body = request.get_json(silent=True) or {}
+    name = body.get("id", "")
+    if not name or "/" in name or ".." in name:
+        return jsonify(error="bad id"), 400
+    p = BG_DIR / name
+    if not p.is_file():
+        return jsonify(error="not found"), 404
+    CURRENT_BG_FILE.write_text(name)
+    return jsonify(ok=True, version=int(p.stat().st_mtime))
 
 
 @app.post("/api/shutdown")

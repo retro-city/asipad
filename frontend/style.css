@@ -252,6 +252,105 @@ header h1 {
   font-weight: 500;
 }
 
+.cal-nav-spacer { flex: 0 0 auto; width: 6vw; }
+
+.cal-nav[disabled] { opacity: 0.25; cursor: default; }
+.cal-nav[disabled]:active { transform: none; }
+
+/* INNSTILLINGER sub-page grid */
+.settings-grid {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 2vw;
+}
+
+.setting-tile {
+  background: rgba(28, 36, 64, 0.85);
+  color: var(--fg);
+  border: none;
+  border-radius: 2vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1vh;
+  padding: 1vw;
+  cursor: pointer;
+  font: inherit;
+  min-width: 0;
+  min-height: 0;
+}
+
+.setting-tile.placeholder { opacity: 0.4; cursor: default; }
+.setting-tile:not(.placeholder):active { transform: scale(0.97); }
+
+.setting-icon {
+  width: 6vw;
+  height: 6vw;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.setting-icon svg { width: 100%; height: 100%; }
+
+.setting-title {
+  font-size: 2.4vw;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* BAKGRUNN sub-page: 6-thumb grid, paginated */
+.bg-pager {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+  align-items: stretch;
+  gap: 1.5vw;
+}
+
+.bg-grid {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 1.5vw;
+}
+
+.bg-tile {
+  background: rgba(0, 0, 0, 0.35);
+  border: 0.4vw solid transparent;
+  border-radius: 1.5vw;
+  overflow: hidden;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  position: relative;
+}
+
+.bg-tile.current { border-color: var(--accent); }
+.bg-tile.empty   { cursor: default; opacity: 0.25; border-color: transparent; }
+
+.bg-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.bg-loading {
+  font-size: 2.4vw;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 .page-body.fullbleed {
   padding: 0;
   background: #000;

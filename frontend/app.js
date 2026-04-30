@@ -1,10 +1,12 @@
 const PAGES = {
-  kalender: { title: "Kalender", body: calendarBody },
-  tegne:    { title: "Tegne",    body: comingSoon },
-  bilder:   { title: "Bilder",   body: comingSoon },
-  musikk:   { title: "Musikk",   body: comingSoon },
-  lese:     { title: "Lese",     body: comingSoon },
-  spill:    { title: "Spill",    body: gameBody, fullbleed: true, url: "https://opentd2.rykroken.net/" },
+  kalender:      { title: "Kalender",      body: calendarBody },
+  tegne:         { title: "Tegne",         body: comingSoon },
+  bilder:        { title: "Bilder",        body: comingSoon },
+  musikk:        { title: "Musikk",        body: comingSoon },
+  lese:          { title: "Lese",          body: comingSoon },
+  spill:         { title: "Spill",         body: gameBody, fullbleed: true, url: "https://opentd2.rykroken.net/" },
+  innstillinger: { title: "Innstillinger", body: settingsBody },
+  bakgrunn:      { title: "Bakgrunn",      body: backgroundBody, parent: "innstillinger" },
 };
 
 const $ = (s) => document.querySelector(s);
@@ -98,6 +100,97 @@ function shiftCalendar(days) {
   pageBody.innerHTML = calendarBody();
 }
 
+const SETTINGS_TILES = [
+  { route: "bakgrunn", title: "Bakgrunn", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="M3 17l4-4 4 4 5-5 5 5"/></svg>' },
+];
+
+const SETTINGS_PLACEHOLDER_ICON =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l3 16H6z"/><line x1="7.7" y1="11" x2="16.3" y2="11"/><line x1="6.7" y1="16" x2="17.3" y2="16"/><line x1="3" y1="20" x2="21" y2="20"/></svg>';
+
+function settingsBody() {
+  const tiles = [];
+  for (let i = 0; i < 6; i++) {
+    const t = SETTINGS_TILES[i];
+    if (t) {
+      tiles.push(`
+        <button class="setting-tile" data-route="${t.route}">
+          <div class="setting-icon">${t.icon}</div>
+          <div class="setting-title">${t.title}</div>
+        </button>`);
+    } else {
+      tiles.push(`
+        <div class="setting-tile placeholder">
+          <div class="setting-icon">${SETTINGS_PLACEHOLDER_ICON}</div>
+        </div>`);
+    }
+  }
+  return `<div class="settings-grid">${tiles.join("")}</div>`;
+}
+
+const BG_PAGE_SIZE = 6;
+let bgList = [];
+let bgPage = 0;
+
+function backgroundBody() {
+  bgPage = 0;
+  loadBackgroundList();
+  return `<div class="bg-loading">Laster…</div>`;
+}
+
+async function loadBackgroundList() {
+  try {
+    const r = await fetch("/api/backgrounds", { cache: "no-store" });
+    bgList = await r.json();
+  } catch (_) {
+    bgList = [];
+  }
+  renderBgPage();
+}
+
+function renderBgPage() {
+  const total = bgList.length;
+  const totalPages = Math.max(1, Math.ceil(total / BG_PAGE_SIZE));
+  bgPage = Math.max(0, Math.min(bgPage, totalPages - 1));
+  const start = bgPage * BG_PAGE_SIZE;
+  const items = bgList.slice(start, start + BG_PAGE_SIZE);
+  const cells = [];
+  for (let i = 0; i < BG_PAGE_SIZE; i++) {
+    const b = items[i];
+    if (b) {
+      cells.push(`
+        <button class="bg-tile ${b.current ? "current" : ""}" data-bg-id="${b.id}">
+          <img src="${b.url}" alt="">
+        </button>`);
+    } else {
+      cells.push(`<div class="bg-tile empty"></div>`);
+    }
+  }
+  const showArrows = totalPages > 1;
+  pageBody.innerHTML = `
+    <div class="bg-pager">
+      ${showArrows
+        ? `<button class="cal-nav" data-action="bg-prev" ${bgPage === 0 ? "disabled" : ""}>‹</button>`
+        : `<div class="cal-nav-spacer"></div>`}
+      <div class="bg-grid">${cells.join("")}</div>
+      ${showArrows
+        ? `<button class="cal-nav" data-action="bg-next" ${bgPage >= totalPages - 1 ? "disabled" : ""}>›</button>`
+        : `<div class="cal-nav-spacer"></div>`}
+    </div>`;
+}
+
+async function pickBackground(id) {
+  try {
+    await fetch("/api/backgrounds/use", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    bgList = bgList.map((b) => ({ ...b, current: b.id === id }));
+    renderBgPage();
+    pollVersion();
+  } catch (_) { /* swallow */ }
+}
+
 function updateCalendarTile() {
   const now = new Date();
   const sub = $("#cal-date");
@@ -140,11 +233,22 @@ document.querySelectorAll(".tile").forEach((el) => {
 pageBody.addEventListener("click", (e) => {
   if (e.target?.classList?.contains("start-game")) return loadGameIframe();
   const action = e.target?.closest?.("[data-action]")?.dataset?.action;
-  if (action === "prev") shiftCalendar(-1);
-  else if (action === "next") shiftCalendar(1);
+  if (action === "prev") return shiftCalendar(-1);
+  if (action === "next") return shiftCalendar(1);
+  if (action === "bg-prev") { bgPage--; return renderBgPage(); }
+  if (action === "bg-next") { bgPage++; return renderBgPage(); }
+  const route = e.target?.closest?.("[data-route]")?.dataset?.route;
+  if (route && PAGES[route]) return showPage(route);
+  const bgId = e.target?.closest?.("[data-bg-id]")?.dataset?.bgId;
+  if (bgId) return pickBackground(bgId);
 });
 
-$("#back").addEventListener("click", showHome);
+$("#back").addEventListener("click", () => {
+  const m = location.hash.match(/^#\/(.+)/);
+  const cur = m && PAGES[m[1]];
+  if (cur?.parent) showPage(cur.parent);
+  else showHome();
+});
 
 window.addEventListener("hashchange", () => {
   const m = location.hash.match(/^#\/(.+)/);
