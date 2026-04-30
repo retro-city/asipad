@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="nb">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Asipad admin</title>
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <main>
+    <h1>Asipad admin</h1>
+
+    <section>
+      <h2>Bakgrunnsbilde</h2>
+
+      <div class="preview">
+        <img id="preview" alt="Nåværende bakgrunn" src="/background?v=init">
+        <p id="no-bg" hidden>Ingen bakgrunn satt</p>
+      </div>
+
+      <form id="upload-form">
+        <label class="file-input">
+          <input type="file" id="file" name="file" accept="image/*" required>
+          <span id="file-label">Velg bilde…</span>
+        </label>
+        <button type="submit">Last opp</button>
+      </form>
+
+      <button id="clear-bg" type="button" class="danger">Fjern bakgrunn</button>
+
+      <p id="status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section>
+      <h2>Hjelp</h2>
+      <p>Tillatte filtyper: JPG, PNG, WEBP, GIF. Maks 8 MB.</p>
+      <p>Bakgrunnen oppdateres automatisk på iPaden innen noen sekunder.</p>
+    </section>
+  </main>
+  <script src="admin.js"></script>
+</body>
+</html>

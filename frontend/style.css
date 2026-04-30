@@ -1,0 +1,236 @@
+:root {
+  --bg-color: #0e1320;
+  --bg-overlay: rgba(14, 19, 32, 0.55);
+  --fg: #ffffff;
+  --tile: rgba(28, 36, 64, 0.8);
+  --tile-hot: rgba(50, 64, 110, 0.92);
+  --accent: #ffb84d;
+  --danger: #cc4444;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg-color) center/cover no-repeat;
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  overflow: hidden;
+}
+
+body.has-bg { background-image: var(--background-image); }
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: var(--bg-overlay);
+  pointer-events: none;
+  z-index: 0;
+}
+
+main#app { position: relative; z-index: 1; }
+
+.view {
+  position: fixed;
+  inset: 0;
+  padding: 3vw 4vw;
+  display: flex;
+  flex-direction: column;
+  gap: 2vh;
+  min-height: 0;
+}
+
+.view.hidden { display: none; }
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 3vw;
+  flex: 0 0 auto;
+}
+
+header h1 {
+  font-size: 5vw;
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 2vw;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.tile {
+  background: var(--tile);
+  color: var(--fg);
+  border: none;
+  border-radius: 2.4vw;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6vh;
+  padding: 1vw;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  transition: transform 80ms ease, background 80ms ease;
+  font: inherit;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tile:active {
+  transform: scale(0.97);
+  background: var(--tile-hot);
+}
+
+.tile-icon {
+  width: 7vw;
+  height: 7vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+
+.tile-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.tile-title {
+  font-size: 2.6vw;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.tile-sub {
+  font-size: 1.7vw;
+  opacity: 0.8;
+  font-weight: 500;
+  text-transform: capitalize;
+  line-height: 1.1;
+}
+
+#back {
+  font-size: 3vw;
+  padding: 1.5vw 3vw;
+  border-radius: 2vw;
+  border: none;
+  background: var(--accent);
+  color: #1a1a1a;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#back:active { transform: scale(0.95); }
+
+.page-body {
+  flex: 1;
+  background: var(--tile);
+  border-radius: 2.4vw;
+  padding: 3vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.2vw;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  min-height: 0;
+}
+
+.calendar-big {
+  line-height: 1.15;
+  text-transform: capitalize;
+}
+
+.calendar-big .weekday { font-size: 4.5vw; font-weight: 600; opacity: 0.85; }
+.calendar-big .day { font-size: 18vw; font-weight: 800; line-height: 1; margin: 0.5vh 0; color: var(--accent); }
+.calendar-big .month { font-size: 4vw; }
+
+#power-trigger {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 10vw;
+  height: 10vw;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 2;
+}
+
+#power-trigger::after {
+  content: "";
+  position: absolute;
+  top: 1.6vw;
+  right: 1.6vw;
+  width: 1.4vw;
+  height: 1.4vw;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transition: background 200ms ease, transform 200ms ease;
+}
+
+#power-trigger.charging::after {
+  background: var(--accent);
+  transform: scale(2.4);
+  transition: transform 1500ms linear;
+}
+
+dialog#power-menu {
+  border: none;
+  border-radius: 3.5vw;
+  background: var(--tile);
+  color: var(--fg);
+  padding: 5vw;
+  min-width: 60vw;
+  max-width: 80vw;
+}
+
+dialog#power-menu::backdrop { background: rgba(0, 0, 0, 0.7); }
+
+dialog h2 {
+  margin: 0 0 4vw 0;
+  font-size: 5vw;
+  font-weight: 600;
+}
+
+dialog .actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2vw;
+}
+
+dialog .actions button {
+  font-size: 4vw;
+  padding: 3vw 5vw;
+  border: none;
+  border-radius: 2vw;
+  background: var(--tile-hot);
+  color: var(--fg);
+  cursor: pointer;
+  font: inherit;
+}
+
+dialog .actions button[data-action="shutdown"] { background: var(--danger); }
+dialog .actions button[data-action="cancel"] {
+  background: var(--accent);
+  color: #1a1a1a;
+  font-weight: 600;
+}
+dialog .actions button:disabled { opacity: 0.6; cursor: default; }

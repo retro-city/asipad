@@ -1,0 +1,102 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 2rem 1rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  background: #f4f5f9;
+  color: #1c2440;
+  min-height: 100vh;
+}
+
+main {
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+h1 { margin: 0 0 0.5rem 0; font-size: 1.6rem; }
+h2 { margin: 0 0 1rem 0; font-size: 1.15rem; }
+
+section {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.preview {
+  background: #e8eaf2;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  min-height: 160px;
+  max-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview img {
+  max-width: 100%;
+  max-height: 280px;
+  display: block;
+}
+
+.preview p {
+  color: #6a7090;
+  margin: 0;
+}
+
+form {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.file-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.1rem;
+  border-radius: 8px;
+  background: #2c3e7a;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.file-input input { display: none; }
+
+button {
+  padding: 0.7rem 1.3rem;
+  border-radius: 8px;
+  border: none;
+  background: #2c7a3a;
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+button:hover { filter: brightness(1.05); }
+button:active { transform: translateY(1px); }
+button:disabled { opacity: 0.6; cursor: default; transform: none; }
+
+button.danger {
+  background: #c44;
+  margin-top: 0.85rem;
+}
+
+#status {
+  margin: 1rem 0 0 0;
+  min-height: 1.4em;
+  font-weight: 500;
+}
+
+#status.ok { color: #2c7a3a; }
+#status.err { color: #c44; }

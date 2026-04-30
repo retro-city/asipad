@@ -1,0 +1,2 @@
+# Asipad kiosk: passwordless power + local service control for asi.
+asi ALL=(root) NOPASSWD: /sbin/poweroff, /sbin/reboot, /usr/bin/systemctl restart kiosk-server.service, /usr/bin/systemctl reload kiosk-server.service, /usr/bin/systemctl status kiosk-server.service, /usr/bin/systemctl restart asipad-kiosk.service, /usr/bin/systemctl status asipad-kiosk.service

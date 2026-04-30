@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+# Pi-side runtime data — uploaded backgrounds etc.
+data/
