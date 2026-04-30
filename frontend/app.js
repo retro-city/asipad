@@ -14,10 +14,10 @@ const pageTitle = $("#page-title");
 const pageBody = $("#page-body");
 
 function fmtDate(d) {
-  // e.g. "torsdag 30. april 2026" → "torsdag 30 april 2026" (CSS uppercases it).
+  // "torsdag 30. april" — CSS title-cases it to "Torsdag 30. April".
   return d.toLocaleDateString("nb-NO", {
-    weekday: "long", day: "numeric", month: "long", year: "numeric"
-  }).replace(/\./g, "");
+    weekday: "long", day: "numeric", month: "long"
+  });
 }
 
 function comingSoon() {
@@ -41,7 +41,7 @@ function calendarBody() {
   return `<div class="calendar-big">
     <div class="weekday">${weekday}</div>
     <div class="day">${now.getDate()}</div>
-    <div class="month">${month} ${now.getFullYear()}</div>
+    <div class="month">${month}</div>
   </div>`;
 }
 

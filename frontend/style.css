@@ -112,6 +112,11 @@ header h1 {
   height: 100%;
 }
 
+.tile.icon-only .tile-icon {
+  width: 10vw;
+  height: 10vw;
+}
+
 .tile-title {
   font-size: 2.6vw;
   font-weight: 600;
@@ -122,10 +127,9 @@ header h1 {
 
 .tile-sub {
   font-size: 1.7vw;
-  opacity: 0.8;
+  opacity: 0.85;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  text-transform: capitalize;
   line-height: 1.1;
 }
 
@@ -192,8 +196,7 @@ header h1 {
 
 .calendar-big {
   line-height: 1.15;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  text-transform: capitalize;
 }
 
 .calendar-big .weekday { font-size: 4.5vw; font-weight: 600; opacity: 0.85; }
