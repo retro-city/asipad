@@ -7,7 +7,9 @@ Serves the kiosk frontend, an admin UI, and a small power API on port 8080.
 - /admin and /admin/* require HTTP basic auth (see ADMIN_PW_FILE).
 """
 import io
+import json
 import logging
+import re
 import secrets
 import subprocess
 import time
@@ -20,10 +22,15 @@ ROOT = Path(__file__).resolve().parent.parent
 FRONTEND = ROOT / "frontend"
 DATA = ROOT / "data"
 BG_DIR = DATA / "bg"
+JOBS_DIR = DATA / "jobs"
 CURRENT_BG_FILE = DATA / "current-bg.txt"
 DATA.mkdir(exist_ok=True)
 BG_DIR.mkdir(exist_ok=True)
+JOBS_DIR.mkdir(exist_ok=True)
 INDEX = FRONTEND / "index.html"
+
+JOB_ID_RE = re.compile(r"^\d+$")
+MAX_JOB_BYTES = 64 * 1024  # 64 KiB per text file is plenty for kid notes
 
 ADMIN_PW_FILE = Path.home() / ".asipad-admin-password"
 DEFAULT_ADMIN_PASSWORD = "asipad"
@@ -242,6 +249,83 @@ def api_set_background():
         return jsonify(error="not found"), 404
     CURRENT_BG_FILE.write_text(name)
     return jsonify(ok=True, version=int(p.stat().st_mtime))
+
+
+# --- JOBB: simple file-backed text store for the kid's writing tile ---
+
+
+def _job_path(job_id: str) -> Path | None:
+    if not JOB_ID_RE.match(job_id):
+        return None
+    return JOBS_DIR / f"{job_id}.json"
+
+
+def _read_job(p: Path) -> dict:
+    try:
+        data = json.loads(p.read_text())
+    except Exception:
+        data = {}
+    return {
+        "title": str(data.get("title") or "Uten tittel"),
+        "content": str(data.get("content") or ""),
+        "mtime": int(p.stat().st_mtime),
+    }
+
+
+def _validate_job_payload(body: dict) -> tuple[str, str]:
+    title = str(body.get("title") or "").strip() or "Uten tittel"
+    content = str(body.get("content") or "")
+    if len(content.encode("utf-8")) > MAX_JOB_BYTES:
+        abort(413)
+    return title, content
+
+
+@app.get("/api/jobs")
+def api_list_jobs():
+    items = []
+    for p in sorted(JOBS_DIR.glob("*.json"), key=lambda f: f.stat().st_mtime, reverse=True):
+        d = _read_job(p)
+        items.append({"id": p.stem, "title": d["title"], "mtime": d["mtime"]})
+    return jsonify(items)
+
+
+@app.get("/api/jobs/<job_id>")
+def api_get_job(job_id: str):
+    p = _job_path(job_id)
+    if p is None or not p.is_file():
+        return jsonify(error="not found"), 404
+    return jsonify({"id": job_id, **_read_job(p)})
+
+
+@app.post("/api/jobs")
+def api_create_job():
+    body = request.get_json(silent=True) or {}
+    title, content = _validate_job_payload(body)
+    job_id = str(int(time.time() * 1000))
+    p = JOBS_DIR / f"{job_id}.json"
+    p.write_text(json.dumps({"title": title, "content": content}, ensure_ascii=False))
+    return jsonify({"id": job_id, **_read_job(p)})
+
+
+@app.put("/api/jobs/<job_id>")
+def api_update_job(job_id: str):
+    p = _job_path(job_id)
+    if p is None or not p.is_file():
+        return jsonify(error="not found"), 404
+    body = request.get_json(silent=True) or {}
+    title, content = _validate_job_payload(body)
+    p.write_text(json.dumps({"title": title, "content": content}, ensure_ascii=False))
+    return jsonify({"id": job_id, **_read_job(p)})
+
+
+@app.delete("/api/jobs/<job_id>")
+def api_delete_job(job_id: str):
+    p = _job_path(job_id)
+    if p is None:
+        return jsonify(error="bad id"), 400
+    if p.is_file():
+        p.unlink()
+    return jsonify(ok=True)
 
 
 @app.post("/api/shutdown")

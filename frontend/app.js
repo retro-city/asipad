@@ -1,10 +1,9 @@
 const PAGES = {
   kalender:      { title: "Kalender",      body: calendarBody },
-  tegne:         { title: "Tegne",         body: comingSoon },
-  bilder:        { title: "Bilder",        body: comingSoon },
-  musikk:        { title: "Musikk",        body: comingSoon },
   lese:          { title: "Lese",          body: comingSoon },
-  spill:         { title: "Spill",         body: gameBody, fullbleed: true, url: "https://opentd2.rykroken.net/" },
+  skrive:        { title: "Skrive",        body: comingSoon },
+  tall:          { title: "Tall",          body: comingSoon },
+  jobb:          { title: "Jobb",          body: jobbBody },
   innstillinger: { title: "Innstillinger", body: settingsBody },
   bakgrunn:      { title: "Bakgrunn",      body: backgroundBody, parent: "innstillinger" },
 };
@@ -191,6 +190,146 @@ async function pickBackground(id) {
   } catch (_) { /* swallow */ }
 }
 
+// --- Jobb: text editor with file picker ---
+
+let jobs = [];
+let activeJobId = null;
+let activeJobTitle = "";
+let activeJobContent = "";
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
+function jobbBody() {
+  activeJobId = null;
+  activeJobTitle = "";
+  activeJobContent = "";
+  loadJobsList();
+  return `
+    <div class="jobb-split">
+      <div class="jobb-list">
+        <button class="jobb-new" data-action="job-new">+ Ny fil</button>
+        <div class="jobb-items" id="jobb-items"><div class="jobb-empty-list">Laster…</div></div>
+      </div>
+      <div class="jobb-editor" id="jobb-editor">${jobbEditorEmpty()}</div>
+    </div>`;
+}
+
+function jobbEditorEmpty() {
+  return `<div class="jobb-empty">Velg en fil eller lag en ny</div>`;
+}
+
+function jobbEditorOpen() {
+  const showDelete = !!activeJobId;
+  return `
+    <input class="jobb-title-input" id="jobb-title" placeholder="Tittel" value="${escapeHtml(activeJobTitle)}">
+    <textarea class="jobb-content-input" id="jobb-content" placeholder="Skriv her…">${escapeHtml(activeJobContent)}</textarea>
+    <div class="jobb-actions">
+      <button class="jobb-save" data-action="job-save">Lagre</button>
+      ${showDelete ? `<button class="jobb-delete" data-action="job-delete">Slett</button>` : ""}
+    </div>`;
+}
+
+async function loadJobsList() {
+  try {
+    const r = await fetch("/api/jobs", { cache: "no-store" });
+    jobs = await r.json();
+  } catch (_) {
+    jobs = [];
+  }
+  renderJobsList();
+}
+
+function renderJobsList() {
+  const el = document.getElementById("jobb-items");
+  if (!el) return;
+  if (!jobs.length) {
+    el.innerHTML = `<div class="jobb-empty-list">Ingen filer enda</div>`;
+    return;
+  }
+  el.innerHTML = jobs.map((j) => `
+    <button class="jobb-item ${j.id === activeJobId ? "active" : ""}"
+            data-action="job-open" data-job-id="${j.id}">
+      <div class="title">${escapeHtml(j.title)}</div>
+      <div class="date">${new Date(j.mtime * 1000).toLocaleDateString("nb-NO", { day: "numeric", month: "short" })}</div>
+    </button>`).join("");
+}
+
+async function openJob(id) {
+  try {
+    const r = await fetch(`/api/jobs/${id}`, { cache: "no-store" });
+    if (!r.ok) return;
+    const data = await r.json();
+    activeJobId = id;
+    activeJobTitle = data.title || "";
+    activeJobContent = data.content || "";
+    document.getElementById("jobb-editor").innerHTML = jobbEditorOpen();
+    renderJobsList();
+  } catch (_) {}
+}
+
+function newJob() {
+  activeJobId = null;
+  activeJobTitle = "";
+  activeJobContent = "";
+  document.getElementById("jobb-editor").innerHTML = jobbEditorOpen();
+  renderJobsList();
+  setTimeout(() => document.getElementById("jobb-title")?.focus(), 0);
+}
+
+async function saveJob() {
+  const title = document.getElementById("jobb-title")?.value ?? "";
+  const content = document.getElementById("jobb-content")?.value ?? "";
+  try {
+    let data;
+    if (activeJobId) {
+      const r = await fetch(`/api/jobs/${activeJobId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, content }),
+      });
+      data = await r.json();
+    } else {
+      const r = await fetch("/api/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, content }),
+      });
+      data = await r.json();
+      activeJobId = data.id;
+      // Re-render so the delete button appears
+      document.getElementById("jobb-editor").innerHTML = jobbEditorOpen();
+      restoreEditorValues(title, content);
+    }
+    activeJobTitle = data.title;
+    activeJobContent = data.content;
+    loadJobsList();
+  } catch (_) {}
+}
+
+function restoreEditorValues(title, content) {
+  const t = document.getElementById("jobb-title");
+  const c = document.getElementById("jobb-content");
+  if (t) t.value = title;
+  if (c) c.value = content;
+}
+
+async function deleteJob() {
+  if (!activeJobId) return;
+  if (!confirm("Slette denne fila?")) return;
+  try {
+    await fetch(`/api/jobs/${activeJobId}`, { method: "DELETE" });
+    activeJobId = null;
+    activeJobTitle = "";
+    activeJobContent = "";
+    document.getElementById("jobb-editor").innerHTML = jobbEditorEmpty();
+    loadJobsList();
+  } catch (_) {}
+}
+
 function updateCalendarTile() {
   const now = new Date();
   const sub = $("#cal-date");
@@ -237,6 +376,13 @@ pageBody.addEventListener("click", (e) => {
   if (action === "next") return shiftCalendar(1);
   if (action === "bg-prev") { bgPage--; return renderBgPage(); }
   if (action === "bg-next") { bgPage++; return renderBgPage(); }
+  if (action === "job-new") return newJob();
+  if (action === "job-save") return saveJob();
+  if (action === "job-delete") return deleteJob();
+  if (action === "job-open") {
+    const jobId = e.target.closest("[data-job-id]")?.dataset?.jobId;
+    if (jobId) return openJob(jobId);
+  }
   const route = e.target?.closest?.("[data-route]")?.dataset?.route;
   if (route && PAGES[route]) return showPage(route);
   const bgId = e.target?.closest?.("[data-bg-id]")?.dataset?.bgId;
