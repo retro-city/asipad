@@ -1,6 +1,9 @@
 <?xml version="1.0"?>
 <openbox_config xmlns="http://openbox.org/3.4/rc">
-  <touch deviceName="Chalkboard Electronics HID Touchscreen" mapToOutput="HDMI-A-1" mouseEmulation="yes"/>
+  <!-- Forward native wl_touch events to cog (WPE handles taps natively).
+       mouseEmulation="yes" was unreliable here — taps showed :active flash
+       but click events never reached the page. -->
+  <touch deviceName="Chalkboard Electronics HID Touchscreen" mapToOutput="HDMI-A-1" mouseEmulation="no"/>
 
   <!-- Auto-fullscreen every window. Only the kiosk browser ever runs here, so
        this gives us iPad-like behavior without cog having a fullscreen flag. -->

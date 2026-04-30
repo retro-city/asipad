@@ -362,14 +362,36 @@ function showPage(id) {
   }
 }
 
+// Use pointerup (or click as fallback) for navigation taps. On WPE WebKit
+// under labwc, click occasionally didn't fire on touch — pointerup always
+// does. We dedupe by tagging the event when we handle it.
+function bindTap(el, fn) {
+  let armed = false;
+  el.addEventListener("pointerdown", () => { armed = true; });
+  el.addEventListener("pointerup", (e) => {
+    if (!armed) return;
+    armed = false;
+    fn(e);
+  });
+  el.addEventListener("pointercancel", () => { armed = false; });
+  el.addEventListener("pointerleave", () => { armed = false; });
+}
+
 document.querySelectorAll(".tile").forEach((el) => {
-  el.addEventListener("click", () => {
+  bindTap(el, () => {
     const route = el.dataset.route;
     if (route) showPage(route);
   });
 });
 
-pageBody.addEventListener("click", (e) => {
+// Sub-page tap delegation. pointerup not click — see bindTap above.
+let pageBodyArmed = false;
+pageBody.addEventListener("pointerdown", () => { pageBodyArmed = true; });
+pageBody.addEventListener("pointercancel", () => { pageBodyArmed = false; });
+pageBody.addEventListener("pointerleave", () => { pageBodyArmed = false; });
+pageBody.addEventListener("pointerup", (e) => {
+  if (!pageBodyArmed) return;
+  pageBodyArmed = false;
   if (e.target?.classList?.contains("start-game")) return loadGameIframe();
   const action = e.target?.closest?.("[data-action]")?.dataset?.action;
   if (action === "prev") return shiftCalendar(-1);
@@ -389,7 +411,7 @@ pageBody.addEventListener("click", (e) => {
   if (bgId) return pickBackground(bgId);
 });
 
-$("#back").addEventListener("click", () => {
+bindTap($("#back"), () => {
   const m = location.hash.match(/^#\/(.+)/);
   const cur = m && PAGES[m[1]];
   if (cur?.parent) showPage(cur.parent);
