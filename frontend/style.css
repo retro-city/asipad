@@ -579,6 +579,22 @@ body.osk-open .view { padding-bottom: 34vh; }
 .osk-key.osk-space { flex: 9; }
 .osk-key.osk-hide  { flex: 1.4; }
 
+/* Idle dim overlay — fades to black after pointer inactivity, taps wake it. */
+.dim {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1500ms ease;
+  z-index: 1000;
+}
+
+.dim.on {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .page-body.fullbleed {
   padding: 0;
   background: #000;

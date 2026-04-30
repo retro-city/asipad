@@ -610,6 +610,53 @@ document.addEventListener("focusout", () => {
   }, 120);
 });
 
+// --- Idle dim overlay ---
+// Fades a black layer over the page after IDLE_MS of no pointer activity.
+// First touch on the dim wakes it back up (and is swallowed so it doesn't
+// also activate whatever's underneath).
+
+const IDLE_MS = 30_000;
+let idleTimer = null;
+let dimEl = null;
+
+function buildDim() {
+  if (dimEl) return;
+  dimEl = document.createElement("div");
+  dimEl.className = "dim";
+  document.body.appendChild(dimEl);
+  dimEl.addEventListener("pointerdown", (e) => {
+    if (!dimEl.classList.contains("on")) return;
+    e.preventDefault();
+    e.stopPropagation();
+    wakeDim();
+  }, { capture: true });
+}
+
+function sleepDim() {
+  buildDim();
+  dimEl.classList.add("on");
+}
+
+function wakeDim() {
+  if (dimEl) dimEl.classList.remove("on");
+  resetIdleTimer();
+}
+
+function resetIdleTimer() {
+  if (idleTimer) clearTimeout(idleTimer);
+  idleTimer = setTimeout(sleepDim, IDLE_MS);
+}
+
+// Any pointer activity resets the timer.
+["pointerdown", "pointermove", "pointerup", "wheel", "keydown"].forEach((ev) => {
+  document.addEventListener(ev, () => {
+    if (dimEl?.classList.contains("on")) wakeDim();
+    else resetIdleTimer();
+  }, { capture: true, passive: true });
+});
+
+resetIdleTimer();
+
 // Background + version polling: reload kiosk on frontend changes,
 // hot-swap background image when the admin uploads a new one.
 let bootVersion = null;
