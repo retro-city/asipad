@@ -293,8 +293,10 @@ function renderSkrive() {
   return `
     <div class="skrive-split">
       <div class="skrive-board ${skriveState}">
-        <div class="skrive-image" aria-hidden="true">${skriveWord.emoji}</div>
-        <div class="skrive-word">${slots}</div>
+        <div class="skrive-question">
+          <div class="skrive-image" aria-hidden="true">${skriveWord.emoji}</div>
+          <div class="skrive-word">${slots}</div>
+        </div>
         <div class="skrive-feedback">${feedback}</div>
       </div>
       <div class="skrive-kbd">${kbd}</div>

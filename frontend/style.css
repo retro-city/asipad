@@ -867,18 +867,29 @@ body.osk-open .view { padding-bottom: 34vh; }
   gap: 2vh;
 }
 
+.skrive-question {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 4vw;
+  width: 100%;
+}
+
 .skrive-image {
-  font-size: 16vw;
+  font-size: 14vw;
   line-height: 1;
+  flex: 0 0 auto;
 }
 
 .skrive-word {
   display: flex;
   gap: 1vw;
-  font-size: 7vw;
+  font-size: 6vw;
   font-weight: 800;
   letter-spacing: 0.04em;
   line-height: 1;
+  flex: 0 1 auto;
 }
 
 .skrive-word .d {
