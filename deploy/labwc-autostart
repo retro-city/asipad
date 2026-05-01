@@ -15,8 +15,9 @@ unset XDG_CONFIG_HOME
 wvkbd-mobintl --hidden -L 240 -H 0 &
 
 # Wait for the local kiosk server, then launch cog in a respawn loop.
-# The loop dies when *this* labwc instance dies — prevents stale loops
-# stacking up across service restarts.
+# The loop dies when *this* labwc instance dies. cog is run in the
+# background and watched in parallel — if labwc disappears mid-page-render,
+# we tear cog down explicitly instead of leaving it orphaned at 90% CPU.
 LABWC_PID=$(pidof labwc | awk '{print $1}')
 (
   while [ -n "$LABWC_PID" ] && [ -e "/proc/$LABWC_PID" ]; do
@@ -24,7 +25,18 @@ LABWC_PID=$(pidof labwc | awk '{print $1}')
       curl -fsS http://127.0.0.1:8080/api/health >/dev/null 2>&1 && break
       sleep 0.5
     done
-    cog http://127.0.0.1:8080/
+    cog http://127.0.0.1:8080/ &
+    COG_PID=$!
+    while [ -e "/proc/$LABWC_PID" ] && [ -e "/proc/$COG_PID" ]; do
+      sleep 0.5
+    done
+    # If labwc died, take cog with us so it doesn't go zombie/runaway.
+    if [ ! -e "/proc/$LABWC_PID" ]; then
+      kill -TERM "$COG_PID" 2>/dev/null
+      sleep 0.5
+      kill -KILL "$COG_PID" 2>/dev/null
+    fi
+    wait "$COG_PID" 2>/dev/null
     sleep 1
   done
 ) &
