@@ -1,20 +1,21 @@
 <h1><img src="assets/asipad.svg" width="350px" alt="ASIPad" /></h1>
 
-Kiosk firmware for a child's tablet built around a Raspberry Pi + HDMI touchscreen.
-Boots straight into a fullscreen browser pointing at a tiny local Flask server.
-Browser is **cog** (WPE-WebKit) under **cage** (Wayland compositor) — no display
-manager, no Firefox, no Chromium.
+Kiosk firmware for a safe and *disconnected* children's tablet that can be used *as is* or configured/expanded with content from childs personal life. It was designed to be an open source alternative to edutainment products like Lexibook.
+
+The software have been designed with a soon-to-be five year old in mind and the content reflects elements that has been important in their and other childrens play life. This is reflected in sections like a configurable **CALENDAR**, possibiltiy to role-play **WORK** (free typing), **READ** illustrated short stories, practice how to **WRITE**, and do basic math in **NUMBERS**.
+
+It is built around a Raspberry Pi hardware platform and proven to work with a Pi Zero W2 + HDMI touchscreen for cost efficiency. 
+
+It works by booting straight into a fullscreen browser pointing at a tiny local Flask server.
+Browser is **cog** (WPE-WebKit) under **cage** (Wayland compositor). There is no display
+manager to create entry/exit points.
 
 ## Hardware
 
 Tested on:
 
-- Raspberry Pi Zero 2 W (works after the cog+cage migration; Firefox/Chromium will not).
-- Raspberry Pi 4 (works with anything; recommended for an easier life).
-
-The Pi Zero 2 W's single OTG USB port can't reliably power a USB-fed touchscreen
-once the kiosk is running. Either feed the screen its own power, use a powered
-USB hub, or use a Pi 4.
+- **Raspberry Pi Zero 2 W** works with the cog+cage migration as Firefox/Chromium in a desktop environment causes memory exhaustion.
+- **Raspberry Pi 4** works fine.
 
 ## First-time install on a fresh Pi
 
@@ -61,8 +62,8 @@ To target a different account / host without editing tracked files:
 
 ```sh
 cat > .deploy.env <<'EOF'
-KIOSK_USER=mykid
-KIOSK_HOST=10.0.0.5
+KIOSK_USER=asi
+KIOSK_HOST=asipad
 EOF
 ```
 
