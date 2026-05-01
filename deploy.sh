@@ -5,9 +5,19 @@
 #   ./deploy.sh reboot   reboot the Pi
 set -euo pipefail
 
-HOST="${HOST:-asi@asipad.local}"
-DEST="/home/asi/asipad"
 HERE="$(cd "$(dirname "$0")" && pwd)"
+
+# Local overrides — kept out of git so personal usernames / hostnames
+# never enter the public repo. Example .deploy.env:
+#   KIOSK_USER=mykid
+#   KIOSK_HOST=10.0.0.5
+[ -f "$HERE/.deploy.env" ] && . "$HERE/.deploy.env"
+
+# Either set KIOSK_USER + KIOSK_HOST (env or .deploy.env), or pre-set HOST.
+KIOSK_USER="${KIOSK_USER:-asi}"
+KIOSK_HOST="${KIOSK_HOST:-asipad.local}"
+HOST="${HOST:-${KIOSK_USER}@${KIOSK_HOST}}"
+DEST="${DEST:-/home/${KIOSK_USER}/asipad}"
 
 cmd="${1:-sync}"
 

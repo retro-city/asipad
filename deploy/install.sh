@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
-# Asipad kiosk installer. Run on the Pi as asi. Idempotent.
+# Asipad kiosk installer. Run on the Pi as the kiosk user. Idempotent.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_DIR"
 
 if [[ "$EUID" -eq 0 ]]; then
-  echo "run this as asi, not root — sudo will prompt as needed" >&2
+  echo "run this as the kiosk user, not root — sudo will prompt as needed" >&2
   exit 1
 fi
+
+# Whoever is running install.sh is the kiosk user. Service unit + sudoers
+# templates carry __USER__ tokens that we substitute here so the repo
+# itself stays generic.
+KIOSK_USER="${KIOSK_USER:-$(id -un)}"
 
 echo "==> apt packages"
 sudo apt-get update -qq
@@ -39,8 +44,10 @@ if [[ -f /boot/firmware/config.txt ]] && ! grep -qE '^[[:space:]]*gpu_mem=' /boo
 fi
 
 echo "==> sudoers fragment"
-sudo install -m 0440 -o root -g root \
-  deploy/sudoers-kiosk /etc/sudoers.d/asipad-kiosk
+sed "s/__USER__/$KIOSK_USER/g" deploy/sudoers-kiosk \
+  | sudo tee /etc/sudoers.d/asipad-kiosk > /dev/null
+sudo chmod 0440 /etc/sudoers.d/asipad-kiosk
+sudo chown root:root /etc/sudoers.d/asipad-kiosk
 sudo visudo -cf /etc/sudoers.d/asipad-kiosk >/dev/null
 
 echo "==> labwc kiosk config (compositor for cog + wvkbd)"
@@ -53,10 +60,11 @@ rm -f "$HOME/.config/labwc/autostart"
 sudo rm -f /usr/local/bin/asipad-kiosk-runner
 
 echo "==> systemd units"
-sudo install -m 0644 \
-  deploy/kiosk-server.service /etc/systemd/system/kiosk-server.service
-sudo install -m 0644 \
-  deploy/asipad-kiosk.service /etc/systemd/system/asipad-kiosk.service
+for unit in kiosk-server.service asipad-kiosk.service; do
+  sed "s/__USER__/$KIOSK_USER/g" "deploy/$unit" \
+    | sudo tee "/etc/systemd/system/$unit" > /dev/null
+  sudo chmod 0644 "/etc/systemd/system/$unit"
+done
 sudo systemctl daemon-reload
 sudo systemctl enable --now kiosk-server.service
 sudo systemctl enable asipad-kiosk.service

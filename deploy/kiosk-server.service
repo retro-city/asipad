@@ -5,9 +5,9 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=asi
-WorkingDirectory=/home/asi/asipad
-ExecStart=/usr/bin/python3 -u /home/asi/asipad/server/app.py
+User=__USER__
+WorkingDirectory=/home/__USER__/asipad
+ExecStart=/usr/bin/python3 -u /home/__USER__/asipad/server/app.py
 Restart=on-failure
 RestartSec=2
 StandardOutput=journal

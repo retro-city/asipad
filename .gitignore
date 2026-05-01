@@ -4,3 +4,5 @@ __pycache__/
 .DS_Store
 # Pi-side runtime data — uploaded backgrounds etc.
 data/
+# Local deploy overrides (personal usernames/hostnames stay out of git).
+.deploy.env

@@ -21,7 +21,8 @@ USB hub, or use a Pi 4.
 1. Flash Raspberry Pi OS (Trixie / Bookworm successor) using **Raspberry Pi
    Imager**. In the imager's advanced options, set:
    - Hostname: `asipad`
-   - User: `asi`, password: `asi`
+   - User: `asi`, password: `asi` (the deploy artifacts encode whichever user
+     you pick — see "Using a different username" below)
    - Wi-Fi: your network
    - Enable SSH (with public-key auth pointing at your laptop's `~/.ssh/id_ed25519.pub`)
 2. Boot the Pi. Confirm `ssh asi@asipad` works without a password.
@@ -48,6 +49,22 @@ USB hub, or use a Pi 4.
 
 5. The tablet should come up directly into the kiosk within ~10 s on a Pi 4,
    30–60 s on a Pi Zero 2 W (cold-boot only).
+
+### Using a different username or hostname
+
+The deploy artifacts use `__USER__` placeholders that `deploy/install.sh`
+fills in with whoever runs the installer (defaults to `id -un`). The
+laptop-side `deploy.sh` reads `KIOSK_USER` / `KIOSK_HOST` from a gitignored
+`.deploy.env` if present, otherwise defaults to `asi@asipad.local`.
+
+To target a different account / host without editing tracked files:
+
+```sh
+cat > .deploy.env <<'EOF'
+KIOSK_USER=mykid
+KIOSK_HOST=10.0.0.5
+EOF
+```
 
 ## Daily use
 
