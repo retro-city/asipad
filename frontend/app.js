@@ -7,7 +7,28 @@ const PAGES = {
   jobb:          { title: "Jobb",          body: jobbBody },
   innstillinger: { title: "Innstillinger", body: settingsBody },
   bakgrunn:      { title: "Bakgrunn",      body: backgroundBody, parent: "innstillinger" },
+  nivaa:         { title: "Nivå",          body: nivaaBody,      parent: "innstillinger" },
 };
+
+// --- Difficulty (NIVÅ): persisted in localStorage so it survives reloads ---
+
+const NIVAA_KEY = "asipad-nivaa";
+
+function getNivaa() {
+  const v = localStorage.getItem(NIVAA_KEY);
+  return v === "medium" || v === "vanskelig" ? v : "lett";
+}
+
+function setNivaa(v) {
+  localStorage.setItem(NIVAA_KEY, v);
+}
+
+function mathRangeForNivaa() {
+  const n = getNivaa();
+  if (n === "vanskelig") return 250;
+  if (n === "medium")    return 50;
+  return 9;
+}
 
 const $ = (s) => document.querySelector(s);
 const home = $("#home");
@@ -117,8 +138,9 @@ let mathInput = "";
 let mathState = "input"; // "input" | "correct" | "wrong"
 
 function newMathProblem() {
-  mathA = 1 + Math.floor(Math.random() * 9);
-  mathB = 1 + Math.floor(Math.random() * 9);
+  const max = mathRangeForNivaa();
+  mathA = 1 + Math.floor(Math.random() * max);
+  mathB = 1 + Math.floor(Math.random() * max);
   mathInput = "";
   mathState = "input";
 }
@@ -389,6 +411,7 @@ function shiftCalendar(days) {
 
 const SETTINGS_TILES = [
   { route: "bakgrunn", title: "Bakgrunn", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="M3 17l4-4 4 4 5-5 5 5"/></svg>' },
+  { route: "nivaa",    title: "Nivå",     icon: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="14" width="4" height="6" rx="0.6"/><rect x="10" y="9" width="4" height="11" rx="0.6"/><rect x="17" y="4" width="4" height="16" rx="0.6"/></svg>' },
 ];
 
 const SETTINGS_PLACEHOLDER_ICON =
@@ -463,6 +486,32 @@ function renderBgPage() {
         ? `<button class="cal-nav" data-action="bg-next" ${bgPage >= totalPages - 1 ? "disabled" : ""}>›</button>`
         : `<div class="cal-nav-spacer"></div>`}
     </div>`;
+}
+
+// --- NIVÅ sub-page ---
+
+const NIVAA_LEVELS = [
+  { id: "lett",      label: "Lett",      desc: "Tall opp til 9",   color: "#4caf50" },
+  { id: "medium",    label: "Medium",    desc: "Tall opp til 50",  color: "#ffb84d" },
+  { id: "vanskelig", label: "Vanskelig", desc: "Tall opp til 250", color: "#cc4444" },
+];
+
+function nivaaBody() {
+  const cur = getNivaa();
+  return `<div class="nivaa-grid">
+    ${NIVAA_LEVELS.map((l) => `
+      <button class="nivaa-card ${l.id === cur ? "active" : ""}"
+              data-action="set-nivaa" data-nivaa="${l.id}">
+        <div class="nivaa-dot" style="background:${l.color}"></div>
+        <div class="nivaa-name">${l.label}</div>
+        <div class="nivaa-desc">${l.desc}</div>
+      </button>`).join("")}
+  </div>`;
+}
+
+function setActiveNivaa(v) {
+  setNivaa(v);
+  pageBody.innerHTML = nivaaBody();
 }
 
 async function pickBackground(id) {
@@ -708,6 +757,10 @@ pageBody.addEventListener("pointerup", (e) => {
   if (action === "skrive-k") {
     const k = e.target.closest("[data-k]")?.dataset?.k;
     if (k) return skriveKey(k);
+  }
+  if (action === "set-nivaa") {
+    const v = e.target.closest("[data-nivaa]")?.dataset?.nivaa;
+    if (v) return setActiveNivaa(v);
   }
   const route = e.target?.closest?.("[data-route]")?.dataset?.route;
   if (route && PAGES[route]) return showPage(route);

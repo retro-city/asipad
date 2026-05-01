@@ -938,6 +938,56 @@ body.osk-open .view { padding-bottom: 34vh; }
 .skrive-kbd .osk-key.osk-enter { background: rgba(255, 184, 77, 0.18); flex: 1.4; }
 .skrive-kbd .osk-key.osk-space { flex: 9; }
 
+/* NIVÅ — three difficulty cards */
+.nivaa-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2vw;
+  width: 100%;
+  height: 100%;
+}
+
+.nivaa-card {
+  background: var(--tile);
+  border: 0.4vw solid transparent;
+  border-radius: 2vw;
+  color: var(--fg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5vh;
+  padding: 2vw;
+  cursor: pointer;
+  font: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: transform 80ms ease, border-color 120ms ease;
+}
+
+.nivaa-card:active { transform: scale(0.97); }
+.nivaa-card.active { border-color: var(--accent); background: var(--tile-hot); }
+
+.nivaa-dot {
+  width: 5vw;
+  height: 5vw;
+  border-radius: 50%;
+  box-shadow: 0 0 2.5vw rgba(0, 0, 0, 0.35) inset, 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.nivaa-name {
+  font-size: 3.4vw;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.nivaa-desc {
+  font-size: 1.6vw;
+  opacity: 0.7;
+  font-weight: 500;
+  text-align: center;
+}
+
 .calendar-big .weekday { font-size: 4.5vw; font-weight: 600; opacity: 0.85; }
 .calendar-big .day { font-size: 18vw; font-weight: 800; line-height: 1; margin: 0.5vh 0; color: var(--accent); }
 .calendar-big .month { font-size: 4vw; }
