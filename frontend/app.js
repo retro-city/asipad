@@ -2,7 +2,7 @@ const PAGES = {
   kalender:      { title: "Kalender",      body: calendarBody },
   lese:          { title: "Lese",          body: leseBody },
   "lese-read":   { title: "Lese",          body: leseReaderBody, parent: "lese" },
-  skrive:        { title: "Skrive",        body: comingSoon },
+  skrive:        { title: "Skrive",        body: skriveBody },
   tall:          { title: "Tall",          body: tallBody },
   jobb:          { title: "Jobb",          body: jobbBody },
   innstillinger: { title: "Innstillinger", body: settingsBody },
@@ -192,6 +192,124 @@ function mathEquals() {
   } else {
     mathState = "wrong";
     pageBody.innerHTML = renderTall();
+  }
+}
+
+// --- SKRIVE: spell-the-word game ---
+
+const SKRIVE_WORDS = [
+  { emoji: "🦁", word: "LØVE" },
+  { emoji: "🐱", word: "KATT" },
+  { emoji: "🐶", word: "HUND" },
+  { emoji: "🐭", word: "MUS" },
+  { emoji: "🐝", word: "BIE" },
+  { emoji: "🐠", word: "FISK" },
+  { emoji: "🦊", word: "REV" },
+  { emoji: "🐮", word: "KU" },
+  { emoji: "🐷", word: "GRIS" },
+  { emoji: "🐰", word: "KANIN" },
+  { emoji: "🐻", word: "BJØRN" },
+  { emoji: "🐯", word: "TIGER" },
+  { emoji: "🌳", word: "TRE" },
+  { emoji: "☀️", word: "SOL" },
+  { emoji: "🌙", word: "MÅNE" },
+  { emoji: "⭐", word: "STJERNE" },
+  { emoji: "🚗", word: "BIL" },
+  { emoji: "✈️", word: "FLY" },
+  { emoji: "🍎", word: "EPLE" },
+  { emoji: "🥛", word: "MELK" },
+  { emoji: "🏠", word: "HUS" },
+  { emoji: "👁️", word: "ØYE" },
+];
+
+const SKRIVE_KBD = [
+  ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "Å"],
+  ["A", "S", "D", "F", "G", "H", "J", "K", "L", "Ø", "Æ"],
+  ["⌫", "Z", "X", "C", "V", "B", "N", "M", "⏎"],
+];
+
+let skriveWord  = null;
+let skriveInput = "";
+let skriveState = "input"; // input | correct | wrong
+let skrivePrev  = null;    // last word picked, avoids repeats
+
+function newSkriveWord() {
+  let next;
+  for (let i = 0; i < 8; i++) {
+    next = SKRIVE_WORDS[Math.floor(Math.random() * SKRIVE_WORDS.length)];
+    if (next.word !== skrivePrev) break;
+  }
+  skriveWord = next;
+  skrivePrev = next.word;
+  skriveInput = "";
+  skriveState = "input";
+}
+
+function skriveBody() {
+  newSkriveWord();
+  return renderSkrive();
+}
+
+function renderSkrive() {
+  const w = skriveWord.word;
+  const slots = [...w].map((_, i) =>
+    `<span class="d">${skriveInput[i] ?? "_"}</span>`
+  ).join("");
+  const feedback =
+    skriveState === "correct" ? "✓ Bra!" :
+    skriveState === "wrong"   ? "Prøv igjen!" : "";
+
+  const kbd = SKRIVE_KBD.map((row) =>
+    `<div class="osk-row">${row.map((k) =>
+      `<button class="osk-key ${oskClass(k)}" data-action="skrive-k" data-k="${k}">${k}</button>`
+    ).join("")}</div>`
+  ).join("") +
+    `<div class="osk-row">
+      <button class="osk-key osk-space" data-action="skrive-k" data-k=" ">space</button>
+    </div>`;
+
+  return `
+    <div class="skrive-split">
+      <div class="skrive-board ${skriveState}">
+        <div class="skrive-image" aria-hidden="true">${skriveWord.emoji}</div>
+        <div class="skrive-word">${slots}</div>
+        <div class="skrive-feedback">${feedback}</div>
+      </div>
+      <div class="skrive-kbd">${kbd}</div>
+    </div>`;
+}
+
+function skriveKey(k) {
+  if (skriveState === "correct") return; // wait for next word
+  if (k === "⌫") return skriveBackspace();
+  if (k === "⏎") return skriveCheck();
+  // anything else is a letter (or space) to insert
+  if (skriveState === "wrong") skriveState = "input";
+  if (skriveInput.length >= skriveWord.word.length) return;
+  skriveInput += k;
+  pageBody.innerHTML = renderSkrive();
+}
+
+function skriveBackspace() {
+  if (skriveState === "correct") return;
+  if (skriveState === "wrong") skriveState = "input";
+  if (skriveInput.length === 0) return;
+  skriveInput = skriveInput.slice(0, -1);
+  pageBody.innerHTML = renderSkrive();
+}
+
+function skriveCheck() {
+  if (skriveState === "correct") return;
+  if (skriveInput.toUpperCase() === skriveWord.word) {
+    skriveState = "correct";
+    pageBody.innerHTML = renderSkrive();
+    setTimeout(() => {
+      newSkriveWord();
+      pageBody.innerHTML = renderSkrive();
+    }, 1500);
+  } else {
+    skriveState = "wrong";
+    pageBody.innerHTML = renderSkrive();
   }
 }
 
@@ -587,6 +705,10 @@ pageBody.addEventListener("pointerup", (e) => {
   }
   if (action === "math-clear") return mathClear();
   if (action === "math-eq")    return mathEquals();
+  if (action === "skrive-k") {
+    const k = e.target.closest("[data-k]")?.dataset?.k;
+    if (k) return skriveKey(k);
+  }
   const route = e.target?.closest?.("[data-route]")?.dataset?.route;
   if (route && PAGES[route]) return showPage(route);
   const bgId = e.target?.closest?.("[data-bg-id]")?.dataset?.bgId;
