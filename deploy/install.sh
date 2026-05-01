@@ -14,6 +14,7 @@ echo "==> apt packages"
 sudo apt-get update -qq
 sudo apt-get install -y --no-install-recommends \
   python3-flask python3-pil python3-icalendar python3-dateutil \
+  fonts-noto-color-emoji \
   curl zram-tools cage cog wvkbd
 
 echo "==> zram swap (compressed RAM-backed swap, faster than SD)"
