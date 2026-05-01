@@ -104,3 +104,232 @@ form.addEventListener("submit", async (e) => {
 });
 
 refreshLibrary();
+
+// --- Stories admin ---
+
+const storyList         = document.getElementById("story-list");
+const storyStatus       = document.getElementById("story-status");
+const storyEditor       = document.getElementById("story-editor");
+const editorHeading     = document.getElementById("editor-heading");
+const editorTitleInput  = document.getElementById("editor-title-input");
+const editorPages       = document.getElementById("editor-pages");
+const newStoryBtn       = document.getElementById("new-story");
+const editorAddPageBtn  = document.getElementById("editor-add-page");
+const editorSaveBtn     = document.getElementById("editor-save");
+const editorCancelBtn   = document.getElementById("editor-cancel");
+const saveActiveBtn     = document.getElementById("save-active");
+const activeSlots       = document.querySelectorAll("[data-slot]");
+
+let storiesIndex = [];
+let editingStoryId = null;
+let editingPages = [];
+
+function escapeAttr(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
+function setStoryStatus(text, kind = "") {
+  storyStatus.textContent = text;
+  storyStatus.className = kind;
+}
+
+async function refreshStories() {
+  try {
+    const [allR, activeR] = await Promise.all([
+      fetch("/api/stories",        { cache: "no-store" }),
+      fetch("/api/stories/active", { cache: "no-store" }),
+    ]);
+    if (!allR.ok || !activeR.ok) throw new Error("HTTP error");
+    storiesIndex = await allR.json();
+    const activeIds = (await activeR.json()).map((s) => s.id);
+    renderStoryList();
+    renderActiveSlots(activeIds);
+  } catch (err) {
+    storyList.innerHTML = `<p class="empty">Kunne ikke laste: ${err.message}</p>`;
+  }
+}
+
+function renderStoryList() {
+  if (!storiesIndex.length) {
+    storyList.innerHTML = `<p class="empty">Ingen historier enda.</p>`;
+    return;
+  }
+  storyList.innerHTML = storiesIndex.map((s) => `
+    <div class="story-row" data-id="${s.id}">
+      <span class="title">${escapeAttr(s.title)}</span>
+      <span class="meta">${s.page_count} ${s.page_count === 1 ? "side" : "sider"}</span>
+      <button class="edit"   data-action="edit">Rediger</button>
+      <button class="delete" data-action="delete">Slett</button>
+    </div>`).join("");
+}
+
+function renderActiveSlots(activeIds) {
+  activeSlots.forEach((select, i) => {
+    const opts = ['<option value="">— Ingen —</option>'].concat(
+      storiesIndex.map((s) =>
+        `<option value="${s.id}" ${activeIds[i] === s.id ? "selected" : ""}>${escapeAttr(s.title)}</option>`
+      )
+    );
+    select.innerHTML = opts.join("");
+  });
+}
+
+storyList.addEventListener("click", (e) => {
+  const row = e.target.closest(".story-row");
+  if (!row) return;
+  const id = row.dataset.id;
+  const action = e.target.closest("[data-action]")?.dataset?.action;
+  if (action === "edit")   return openEditor(id);
+  if (action === "delete") return deleteStoryAdmin(id);
+});
+
+async function openEditor(id) {
+  if (id) {
+    try {
+      const r = await fetch(`/api/stories/${id}`, { cache: "no-store" });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const s = await r.json();
+      editingStoryId = s.id;
+      editorHeading.textContent = "Rediger historie";
+      editorTitleInput.value = s.title || "";
+      editingPages = (s.pages || []).map((p) => ({
+        text:      p.text || "",
+        image:     p.image || null,
+        image_url: p.image_url || null,
+      }));
+    } catch (err) {
+      setStoryStatus(`Feilet: ${err.message}`, "err");
+      return;
+    }
+  } else {
+    editingStoryId = null;
+    editorHeading.textContent = "Ny historie";
+    editorTitleInput.value = "";
+    editingPages = [{ text: "", image: null, image_url: null }];
+  }
+  renderEditorPages();
+  storyEditor.showModal();
+}
+
+function renderEditorPages() {
+  editorPages.innerHTML = editingPages.map((p, i) => `
+    <div class="editor-page" data-idx="${i}">
+      <div class="head">
+        <span class="num">Side ${i + 1}</span>
+        <button type="button" class="remove" data-action="remove-page">Fjern</button>
+      </div>
+      <textarea data-field="text" placeholder="Tekst på denne siden">${escapeAttr(p.text)}</textarea>
+      <div class="img-row">
+        <div class="img-thumb">${p.image_url ? `<img src="${p.image_url}" alt="">` : ""}</div>
+        <label class="file-input">
+          <input type="file" accept="image/*" data-action="page-img">
+          <span>${p.image ? "Bytt bilde" : "Velg bilde"}</span>
+        </label>
+      </div>
+    </div>`).join("");
+}
+
+editorPages.addEventListener("input", (e) => {
+  const page = e.target.closest(".editor-page");
+  if (!page) return;
+  const idx = +page.dataset.idx;
+  if (e.target.dataset.field === "text") editingPages[idx].text = e.target.value;
+});
+
+editorPages.addEventListener("click", (e) => {
+  if (!e.target.closest("[data-action='remove-page']")) return;
+  const page = e.target.closest(".editor-page");
+  const idx = +page.dataset.idx;
+  editingPages.splice(idx, 1);
+  renderEditorPages();
+});
+
+editorPages.addEventListener("change", async (e) => {
+  if (e.target.dataset.action !== "page-img") return;
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const page = e.target.closest(".editor-page");
+  const idx = +page.dataset.idx;
+  const fd = new FormData();
+  fd.append("file", file);
+  setStoryStatus("Laster opp bilde…");
+  try {
+    const r = await fetch("/api/stories/img", { method: "POST", body: fd });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    editingPages[idx].image = data.name;
+    editingPages[idx].image_url = data.url;
+    renderEditorPages();
+    setStoryStatus("Bilde opplastet.", "ok");
+  } catch (err) {
+    setStoryStatus(`Feilet: ${err.message}`, "err");
+  }
+});
+
+editorAddPageBtn.addEventListener("click", (e) => {
+  e.preventDefault();
+  editingPages.push({ text: "", image: null, image_url: null });
+  renderEditorPages();
+});
+
+editorCancelBtn.addEventListener("click", (e) => {
+  e.preventDefault();
+  storyEditor.close();
+});
+
+editorSaveBtn.addEventListener("click", async (e) => {
+  e.preventDefault();
+  const payload = {
+    title: editorTitleInput.value.trim() || "Uten tittel",
+    pages: editingPages.map((p) => ({ text: p.text, image: p.image || null })),
+  };
+  try {
+    const url    = editingStoryId ? `/api/stories/${editingStoryId}` : "/api/stories";
+    const method = editingStoryId ? "PUT" : "POST";
+    const r = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    storyEditor.close();
+    setStoryStatus("Lagret.", "ok");
+    refreshStories();
+  } catch (err) {
+    setStoryStatus(`Feilet: ${err.message}`, "err");
+  }
+});
+
+newStoryBtn.addEventListener("click", () => openEditor(null));
+
+async function deleteStoryAdmin(id) {
+  if (!confirm("Slette denne historien?")) return;
+  try {
+    const r = await fetch(`/api/stories/${id}`, { method: "DELETE" });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    setStoryStatus("Slettet.", "ok");
+    refreshStories();
+  } catch (err) {
+    setStoryStatus(`Feilet: ${err.message}`, "err");
+  }
+}
+
+saveActiveBtn.addEventListener("click", async () => {
+  const ids = Array.from(activeSlots).map((s) => s.value).filter(Boolean);
+  try {
+    const r = await fetch("/api/stories/active", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    setStoryStatus("Aktive historier lagret.", "ok");
+    refreshStories();
+  } catch (err) {
+    setStoryStatus(`Feilet: ${err.message}`, "err");
+  }
+});
+
+refreshStories();

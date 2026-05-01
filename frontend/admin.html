@@ -31,6 +31,38 @@
     </section>
 
     <section>
+      <h2>Historier</h2>
+      <p class="hint">Aktive historier vises på iPaden under LESE. Du kan lagre flere og bytte når du vil.</p>
+
+      <h3>Aktive historier (inntil 3)</h3>
+      <div id="active-slots" class="active-slots">
+        <select data-slot="0"></select>
+        <select data-slot="1"></select>
+        <select data-slot="2"></select>
+      </div>
+      <button id="save-active">Lagre aktive</button>
+
+      <h3>Alle historier</h3>
+      <div id="story-list" class="story-list-admin">
+        <p class="empty">Laster…</p>
+      </div>
+      <button id="new-story">+ Ny historie</button>
+
+      <p id="story-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <dialog id="story-editor">
+      <h2 id="editor-heading">Rediger historie</h2>
+      <input id="editor-title-input" placeholder="Tittel">
+      <div id="editor-pages" class="editor-pages"></div>
+      <div class="editor-actions">
+        <button id="editor-add-page">+ Side</button>
+        <button id="editor-save">Lagre</button>
+        <button id="editor-cancel">Avbryt</button>
+      </div>
+    </dialog>
+
+    <section>
       <h2>Hjelp</h2>
       <ul>
         <li>Tillatte filtyper: JPG, PNG, WEBP, GIF. Maks 16 MB per fil.</li>
