@@ -1,4 +1,4 @@
-# asipad
+<h1><img src="assets/asipad.svg" width="350px" alt="ASIPad" /></h1>
 
 Kiosk firmware for a child's tablet built around a Raspberry Pi + HDMI touchscreen.
 Boots straight into a fullscreen browser pointing at a tiny local Flask server.
@@ -164,3 +164,7 @@ asipad/
 │   └── admin.js
 └── data/                     # runtime — uploaded backgrounds (gitignored)
 ```
+
+## License
+
+GPLv3 — see [`LICENSE`](LICENSE).
