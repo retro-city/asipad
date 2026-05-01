@@ -1,6 +1,6 @@
 <h1><img src="assets/asipad.svg" width="350px" alt="ASIPad" /></h1>
 
-Kiosk firmware for a safe and *disconnected* children's tablet that can be used *as is* or configured/expanded with content from childs personal life. It was designed to be an open source alternative to edutainment products like Lexibook.
+Kiosk firmware for a safe and *disconnected* children's tablet that can be used *as is* or configured/expanded with content from the childs personal life. It was designed to be an open source alternative to edutainment products like Lexibook.
 
 The software have been designed with a soon-to-be five year old in mind and the content reflects elements that has been important in their and other childrens play life. This is reflected in sections like a configurable **CALENDAR**, possibiltiy to role-play **WORK** (free typing), **READ** illustrated short stories, practice how to **WRITE**, and do basic math in **NUMBERS**.
 
