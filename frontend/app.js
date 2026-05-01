@@ -23,10 +23,10 @@ function setNivaa(v) {
   localStorage.setItem(NIVAA_KEY, v);
 }
 
-function mathRangeForNivaa() {
+function mathSumCapForNivaa() {
   const n = getNivaa();
-  if (n === "vanskelig") return 250;
-  if (n === "medium")    return 50;
+  if (n === "vanskelig") return 100;
+  if (n === "medium")    return 30;
   return 9;
 }
 
@@ -138,9 +138,10 @@ let mathInput = "";
 let mathState = "input"; // "input" | "correct" | "wrong"
 
 function newMathProblem() {
-  const max = mathRangeForNivaa();
-  mathA = 1 + Math.floor(Math.random() * max);
-  mathB = 1 + Math.floor(Math.random() * max);
+  // Pick a, b ≥ 1 such that a + b ≤ cap. Cap is the level's "sum opp til X".
+  const cap = mathSumCapForNivaa();
+  mathA = 1 + Math.floor(Math.random() * (cap - 1));
+  mathB = 1 + Math.floor(Math.random() * (cap - mathA));
   mathInput = "";
   mathState = "input";
 }
@@ -493,9 +494,9 @@ function renderBgPage() {
 // --- NIVÅ sub-page ---
 
 const NIVAA_LEVELS = [
-  { id: "lett",      label: "Lett",      desc: "Tall opp til 9",   color: "#4caf50" },
-  { id: "medium",    label: "Medium",    desc: "Tall opp til 50",  color: "#ffb84d" },
-  { id: "vanskelig", label: "Vanskelig", desc: "Tall opp til 250", color: "#cc4444" },
+  { id: "lett",      label: "Lett",      desc: "Sum opp til 9",   color: "#4caf50" },
+  { id: "medium",    label: "Medium",    desc: "Sum opp til 30",  color: "#ffb84d" },
+  { id: "vanskelig", label: "Vanskelig", desc: "Sum opp til 100", color: "#cc4444" },
 ];
 
 function nivaaBody() {
