@@ -23,14 +23,22 @@ FRONTEND = ROOT / "frontend"
 DATA = ROOT / "data"
 BG_DIR = DATA / "bg"
 JOBS_DIR = DATA / "jobs"
+STORIES_DIR = DATA / "stories"
+STORY_IMG_DIR = STORIES_DIR / "img"
 CURRENT_BG_FILE = DATA / "current-bg.txt"
+ACTIVE_STORIES_FILE = STORIES_DIR / "active.txt"
 DATA.mkdir(exist_ok=True)
 BG_DIR.mkdir(exist_ok=True)
 JOBS_DIR.mkdir(exist_ok=True)
+STORIES_DIR.mkdir(exist_ok=True)
+STORY_IMG_DIR.mkdir(exist_ok=True)
 INDEX = FRONTEND / "index.html"
 
 JOB_ID_RE = re.compile(r"^\d+$")
+STORY_ID_RE = re.compile(r"^\d+$")
 MAX_JOB_BYTES = 64 * 1024  # 64 KiB per text file is plenty for kid notes
+MAX_STORY_BYTES = 256 * 1024  # 256 KiB per story (text only — images live separately)
+MAX_ACTIVE_STORIES = 3
 
 ADMIN_PW_FILE = Path.home() / ".asipad-admin-password"
 DEFAULT_ADMIN_PASSWORD = "asipad"
@@ -326,6 +334,195 @@ def api_delete_job(job_id: str):
     if p.is_file():
         p.unlink()
     return jsonify(ok=True)
+
+
+# --- LESE: multi-page illustrated stories ---
+
+
+def _story_path(sid: str) -> Path | None:
+    if not STORY_ID_RE.match(sid):
+        return None
+    return STORIES_DIR / f"{sid}.json"
+
+
+def _story_summary(p: Path) -> dict:
+    try:
+        d = json.loads(p.read_text())
+    except Exception:
+        d = {}
+    return {
+        "id": p.stem,
+        "title": str(d.get("title") or "Uten tittel"),
+        "page_count": len(d.get("pages") or []),
+        "mtime": int(p.stat().st_mtime),
+    }
+
+
+def _story_full(p: Path) -> dict:
+    try:
+        d = json.loads(p.read_text())
+    except Exception:
+        d = {}
+    pages = []
+    for page in d.get("pages") or []:
+        img = page.get("image") or None
+        pages.append({
+            "text": str(page.get("text") or ""),
+            "image": img,
+            "image_url": f"/api/stories/img/{img}" if img else None,
+        })
+    return {
+        "id": p.stem,
+        "title": str(d.get("title") or "Uten tittel"),
+        "pages": pages,
+        "mtime": int(p.stat().st_mtime),
+    }
+
+
+def _read_active_stories() -> list[str]:
+    if not ACTIVE_STORIES_FILE.exists():
+        return []
+    return [
+        ln.strip()
+        for ln in ACTIVE_STORIES_FILE.read_text().splitlines()
+        if ln.strip() and STORY_ID_RE.match(ln.strip())
+    ][:MAX_ACTIVE_STORIES]
+
+
+def _write_active_stories(ids: list[str]) -> None:
+    valid = []
+    for i in ids:
+        i = str(i).strip()
+        if not STORY_ID_RE.match(i):
+            continue
+        if not (STORIES_DIR / f"{i}.json").is_file():
+            continue
+        valid.append(i)
+    ACTIVE_STORIES_FILE.write_text("\n".join(valid[:MAX_ACTIVE_STORIES]))
+
+
+def _validate_story_payload(body: dict) -> tuple[str, list[dict]]:
+    title = str(body.get("title") or "").strip() or "Uten tittel"
+    raw_pages = body.get("pages") or []
+    pages = []
+    for p in raw_pages:
+        if not isinstance(p, dict):
+            continue
+        text = str(p.get("text") or "")
+        img = p.get("image")
+        if img is not None:
+            img = str(img).strip()
+            if "/" in img or ".." in img or not img:
+                img = None
+        pages.append({"text": text, "image": img})
+    if len(json.dumps({"title": title, "pages": pages}).encode("utf-8")) > MAX_STORY_BYTES:
+        abort(413)
+    return title, pages
+
+
+@app.get("/api/stories")
+def api_list_stories():
+    items = [_story_summary(p) for p in sorted(
+        STORIES_DIR.glob("*.json"),
+        key=lambda f: f.stat().st_mtime,
+        reverse=True,
+    )]
+    return jsonify(items)
+
+
+@app.get("/api/stories/active")
+def api_active_stories():
+    out = []
+    for sid in _read_active_stories():
+        p = _story_path(sid)
+        if p and p.is_file():
+            out.append(_story_summary(p))
+    return jsonify(out)
+
+
+@app.post("/api/stories/active")
+def api_set_active_stories():
+    if (resp := require_admin()) is not None:
+        return resp
+    body = request.get_json(silent=True) or {}
+    _write_active_stories([str(i) for i in (body.get("ids") or [])])
+    return jsonify(active=_read_active_stories())
+
+
+@app.post("/api/stories")
+def api_create_story():
+    if (resp := require_admin()) is not None:
+        return resp
+    body = request.get_json(silent=True) or {}
+    title, pages = _validate_story_payload(body)
+    sid = str(int(time.time() * 1000))
+    p = STORIES_DIR / f"{sid}.json"
+    p.write_text(json.dumps({"title": title, "pages": pages}, ensure_ascii=False))
+    return jsonify(_story_full(p))
+
+
+@app.get("/api/stories/<sid>")
+def api_get_story(sid: str):
+    p = _story_path(sid)
+    if p is None or not p.is_file():
+        return jsonify(error="not found"), 404
+    return jsonify(_story_full(p))
+
+
+@app.put("/api/stories/<sid>")
+def api_update_story(sid: str):
+    if (resp := require_admin()) is not None:
+        return resp
+    p = _story_path(sid)
+    if p is None or not p.is_file():
+        return jsonify(error="not found"), 404
+    body = request.get_json(silent=True) or {}
+    title, pages = _validate_story_payload(body)
+    p.write_text(json.dumps({"title": title, "pages": pages}, ensure_ascii=False))
+    return jsonify(_story_full(p))
+
+
+@app.delete("/api/stories/<sid>")
+def api_delete_story(sid: str):
+    if (resp := require_admin()) is not None:
+        return resp
+    p = _story_path(sid)
+    if p is None:
+        return jsonify(error="bad id"), 400
+    if p.is_file():
+        p.unlink()
+    active = _read_active_stories()
+    if sid in active:
+        active.remove(sid)
+        _write_active_stories(active)
+    return jsonify(ok=True)
+
+
+@app.get("/api/stories/img/<name>")
+def api_story_img(name: str):
+    if "/" in name or ".." in name:
+        abort(400)
+    return send_from_directory(STORY_IMG_DIR, name, max_age=0)
+
+
+@app.post("/api/stories/img")
+def api_upload_story_img():
+    if (resp := require_admin()) is not None:
+        return resp
+    file = request.files.get("file")
+    if file is None or not file.filename:
+        return jsonify(error="missing file"), 400
+    ext = Path(file.filename).suffix.lower()
+    if ext not in ALLOWED_BG:
+        return jsonify(error=f"extension {ext} not allowed"), 400
+    try:
+        data = _normalize_bg(file)
+    except Exception as e:
+        return jsonify(error=f"could not process image: {e}"), 400
+    name = f"{int(time.time() * 1000)}.webp"
+    target = STORY_IMG_DIR / name
+    target.write_bytes(data)
+    return jsonify(ok=True, name=name, url=f"/api/stories/img/{name}")
 
 
 @app.post("/api/shutdown")
