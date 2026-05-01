@@ -1,6 +1,7 @@
 const PAGES = {
   kalender:      { title: "Kalender",      body: calendarBody },
   lese:          { title: "Lese",          body: leseBody },
+  "lese-read":   { title: "Lese",          body: leseReaderBody, parent: "lese" },
   skrive:        { title: "Skrive",        body: comingSoon },
   tall:          { title: "Tall",          body: comingSoon },
   jobb:          { title: "Jobb",          body: jobbBody },
@@ -25,17 +26,88 @@ function comingSoon() {
   return `<div>Kommer snart!</div>`;
 }
 
+// LESE: pick from up to 3 active stories, then read pages with prev/next arrows.
+
+let activeStories = [];
+let activeStory = null;
+let activeStoryPage = 0;
+
 function leseBody() {
-  // Reading-practice text. Update LESE_LINES below to change.
-  return `<div class="lese-content">${LESE_LINES.map((l) => `<p>${l}</p>`).join("")}</div>`;
+  loadActiveStories();
+  return `<div class="lese-loading">Laster…</div>`;
 }
 
-const LESE_LINES = [
-  "HEI!",
-  "VI ER VELDIG GLAD I DEG.",
-  "DU ER VELDIG FLINK Å LESE.",
-  "DU KAN LESE KATT, MUS, HUND OG TIGER.",
-];
+async function loadActiveStories() {
+  try {
+    const r = await fetch("/api/stories/active", { cache: "no-store" });
+    activeStories = await r.json();
+  } catch (_) {
+    activeStories = [];
+  }
+  renderLeseLanding();
+}
+
+function renderLeseLanding() {
+  if (!Array.isArray(activeStories) || activeStories.length === 0) {
+    pageBody.innerHTML =
+      `<div class="lese-empty">Ingen historier valgt enda. Legg til i admin.</div>`;
+    return;
+  }
+  const cards = activeStories.map((s, i) => `
+    <button class="story-card" data-action="story-open" data-story-id="${s.id}">
+      <div class="story-num">${i + 1}</div>
+      <div class="story-title">${escapeHtml(s.title)}</div>
+      <div class="story-pages">${s.page_count} ${s.page_count === 1 ? "side" : "sider"}</div>
+    </button>`).join("");
+  pageBody.innerHTML = `<div class="story-list">${cards}</div>`;
+}
+
+async function openStory(id) {
+  try {
+    const r = await fetch(`/api/stories/${id}`, { cache: "no-store" });
+    if (!r.ok) return;
+    activeStory = await r.json();
+    activeStoryPage = 0;
+    showPage("lese-read");
+  } catch (_) {}
+}
+
+function leseReaderBody() {
+  if (!activeStory || !Array.isArray(activeStory.pages) || activeStory.pages.length === 0) {
+    return `<div class="lese-empty">Historie mangler sider.</div>`;
+  }
+  const total = activeStory.pages.length;
+  const idx = activeStoryPage;
+  const p = activeStory.pages[idx];
+  const showPrev = idx > 0;
+  const showNext = idx < total - 1;
+  const flipped = idx % 2 === 1; // alternate image side per page
+  return `
+    <div class="story-reader ${flipped ? "flipped" : ""}">
+      ${showPrev
+        ? `<button class="cal-nav" data-action="story-prev" aria-label="Forrige side">‹</button>`
+        : `<div class="cal-nav-spacer"></div>`}
+      <div class="story-page">
+        <div class="story-image">
+          ${p.image_url ? `<img src="${p.image_url}" alt="">` : `<div class="story-image-empty">Ingen bilde</div>`}
+        </div>
+        <div class="story-text">${escapeHtml(p.text || "").replace(/\n/g, "<br>")}</div>
+      </div>
+      ${showNext
+        ? `<button class="cal-nav" data-action="story-next" aria-label="Neste side">›</button>`
+        : `<div class="cal-nav-spacer"></div>`}
+      <div class="story-pageno">Side ${idx + 1} av ${total}</div>
+    </div>`;
+}
+
+function shiftStoryPage(delta) {
+  if (!activeStory) return;
+  activeStoryPage = Math.max(
+    0,
+    Math.min(activeStory.pages.length - 1, activeStoryPage + delta)
+  );
+  pageBody.innerHTML = leseReaderBody();
+}
 
 function gameBody() {
   // Two-step gate so the heavy game iframe only loads after an explicit tap
@@ -417,6 +489,12 @@ pageBody.addEventListener("pointerup", (e) => {
     const jobId = e.target.closest("[data-job-id]")?.dataset?.jobId;
     if (jobId) return openJob(jobId);
   }
+  if (action === "story-open") {
+    const sid = e.target.closest("[data-story-id]")?.dataset?.storyId;
+    if (sid) return openStory(sid);
+  }
+  if (action === "story-prev") return shiftStoryPage(-1);
+  if (action === "story-next") return shiftStoryPage(1);
   const route = e.target?.closest?.("[data-route]")?.dataset?.route;
   if (route && PAGES[route]) return showPage(route);
   const bgId = e.target?.closest?.("[data-bg-id]")?.dataset?.bgId;
