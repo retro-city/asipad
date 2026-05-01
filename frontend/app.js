@@ -2,7 +2,9 @@ const PAGES = {
   kalender:      { title: "Kalender",      body: calendarBody },
   lese:          { title: "Lese",          body: leseBody },
   "lese-read":   { title: "Lese",          body: leseReaderBody, parent: "lese" },
-  skrive:        { title: "Skrive",        body: skriveBody },
+  skrive:            { title: "Skrive",   body: skriveMenuBody },
+  "skrive-norsk":    { title: "Norsk",    body: skriveNorskBody,    parent: "skrive" },
+  "skrive-ukrainsk": { title: "Ukrainsk", body: skriveUkrainskBody, parent: "skrive" },
   tall:          { title: "Tall",          body: tallBody },
   jobb:          { title: "Jobb",          body: jobbBody },
   innstillinger: { title: "Innstillinger", body: settingsBody },
@@ -218,59 +220,130 @@ function mathEquals() {
   }
 }
 
-// --- SKRIVE: spell-the-word game ---
+// --- SKRIVE: spell-the-word games (Norwegian + Ukrainian) ---
 
-const SKRIVE_WORDS = [
-  { emoji: "🦁", word: "LØVE" },
-  { emoji: "🐱", word: "KATT" },
-  { emoji: "🐶", word: "HUND" },
-  { emoji: "🐭", word: "MUS" },
-  { emoji: "🐝", word: "BIE" },
-  { emoji: "🐠", word: "FISK" },
-  { emoji: "🦊", word: "REV" },
-  { emoji: "🐮", word: "KU" },
-  { emoji: "🐷", word: "GRIS" },
-  { emoji: "🐰", word: "KANIN" },
-  { emoji: "🐻", word: "BJØRN" },
-  { emoji: "🐯", word: "TIGER" },
-  { emoji: "🌳", word: "TRE" },
-  { emoji: "☀️", word: "SOL" },
-  { emoji: "🌙", word: "MÅNE" },
-  { emoji: "⭐", word: "STJERNE" },
-  { emoji: "🚗", word: "BIL" },
-  { emoji: "✈️", word: "FLY" },
-  { emoji: "🍎", word: "EPLE" },
-  { emoji: "🥛", word: "MELK" },
-  { emoji: "🏠", word: "HUS" },
-  { emoji: "👁️", word: "ØYE" },
-];
+const SKRIVE_GAMES = {
+  norsk: {
+    label: "Norsk",
+    flag:  "🇳🇴",
+    kbd: [
+      ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "Å"],
+      ["A", "S", "D", "F", "G", "H", "J", "K", "L", "Ø", "Æ"],
+      ["⌫", "Z", "X", "C", "V", "B", "N", "M", "⏎"],
+    ],
+    words: [
+      { emoji: "🦁", word: "LØVE" },
+      { emoji: "🐱", word: "KATT" },
+      { emoji: "🐶", word: "HUND" },
+      { emoji: "🐭", word: "MUS" },
+      { emoji: "🐝", word: "BIE" },
+      { emoji: "🐠", word: "FISK" },
+      { emoji: "🦊", word: "REV" },
+      { emoji: "🐮", word: "KU" },
+      { emoji: "🐷", word: "GRIS" },
+      { emoji: "🐰", word: "KANIN" },
+      { emoji: "🐻", word: "BJØRN" },
+      { emoji: "🐯", word: "TIGER" },
+      { emoji: "🌳", word: "TRE" },
+      { emoji: "☀️", word: "SOL" },
+      { emoji: "🌙", word: "MÅNE" },
+      { emoji: "⭐", word: "STJERNE" },
+      { emoji: "🚗", word: "BIL" },
+      { emoji: "✈️", word: "FLY" },
+      { emoji: "🍎", word: "EPLE" },
+      { emoji: "🥛", word: "MELK" },
+      { emoji: "🏠", word: "HUS" },
+      { emoji: "👁️", word: "ØYE" },
+    ],
+  },
+  ukrainsk: {
+    label: "Ukrainsk",
+    flag:  "🇺🇦",
+    // ЙЦУКЕН Ukrainian layout (simplified — no Ґ, no apostrophe).
+    kbd: [
+      ["Й", "Ц", "У", "К", "Е", "Н", "Г", "Ш", "Щ", "З", "Х", "Ї"],
+      ["Ф", "І", "В", "А", "П", "Р", "О", "Л", "Д", "Ж", "Є"],
+      ["⌫", "Я", "Ч", "С", "М", "И", "Т", "Ь", "Б", "Ю", "⏎"],
+    ],
+    // Words intentionally chosen so the Ukrainian-easy ones don't necessarily
+    // overlap with the Norwegian-easy ones (and vice versa).
+    words: [
+      { emoji: "🦁", word: "ЛЕВ" },
+      { emoji: "🐱", word: "КІТ" },
+      { emoji: "🐶", word: "ПЕС" },
+      { emoji: "🐭", word: "МИША" },
+      { emoji: "🐠", word: "РИБА" },
+      { emoji: "🦊", word: "ЛИС" },
+      { emoji: "🐯", word: "ТИГР" },
+      { emoji: "🐮", word: "КОРОВА" },
+      { emoji: "🐷", word: "СВИНЯ" },
+      { emoji: "🐰", word: "ЗАЯЦЬ" },
+      { emoji: "🐻", word: "ВЕДМІДЬ" },
+      { emoji: "🐦", word: "ПТАХ" },
+      { emoji: "🌳", word: "ДЕРЕВО" },
+      { emoji: "☀️", word: "СОНЦЕ" },
+      { emoji: "🌙", word: "МІСЯЦЬ" },
+      { emoji: "⭐", word: "ЗІРКА" },
+      { emoji: "🍎", word: "ЯБЛУКО" },
+      { emoji: "🥛", word: "МОЛОКО" },
+      { emoji: "🏠", word: "ДІМ" },
+      { emoji: "👁️", word: "ОКО" },
+      { emoji: "🥚", word: "ЯЙЦЕ" },
+      { emoji: "🚗", word: "АВТО" },
+      { emoji: "🌊", word: "МОРЕ" },
+      { emoji: "🌹", word: "ТРОЯНДА" },
+    ],
+  },
+};
 
-const SKRIVE_KBD = [
-  ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "Å"],
-  ["A", "S", "D", "F", "G", "H", "J", "K", "L", "Ø", "Æ"],
-  ["⌫", "Z", "X", "C", "V", "B", "N", "M", "⏎"],
-];
-
+let skriveMode  = "norsk";
 let skriveWord  = null;
 let skriveInput = "";
 let skriveState = "input"; // input | correct | wrong
-let skrivePrev  = null;    // last word picked, avoids repeats
+let skrivePrev  = null;    // last word, avoid back-to-back repeats
+
+function skriveMenuBody() {
+  return `<div class="story-list">
+    <button class="story-card" data-route="skrive-norsk">
+      <div class="story-flag">${SKRIVE_GAMES.norsk.flag}</div>
+      <div class="story-title">${SKRIVE_GAMES.norsk.label}</div>
+    </button>
+    <button class="story-card" data-route="skrive-ukrainsk">
+      <div class="story-flag">${SKRIVE_GAMES.ukrainsk.flag}</div>
+      <div class="story-title">${SKRIVE_GAMES.ukrainsk.label}</div>
+    </button>
+    <div class="story-card disabled">
+      <div class="story-flag">?</div>
+      <div class="story-title">Kommer snart</div>
+    </div>
+  </div>`;
+}
+
+function skriveNorskBody() {
+  skriveMode = "norsk";
+  skrivePrev = null;
+  newSkriveWord();
+  return renderSkrive();
+}
+
+function skriveUkrainskBody() {
+  skriveMode = "ukrainsk";
+  skrivePrev = null;
+  newSkriveWord();
+  return renderSkrive();
+}
 
 function newSkriveWord() {
+  const list = SKRIVE_GAMES[skriveMode].words;
   let next;
   for (let i = 0; i < 8; i++) {
-    next = SKRIVE_WORDS[Math.floor(Math.random() * SKRIVE_WORDS.length)];
+    next = list[Math.floor(Math.random() * list.length)];
     if (next.word !== skrivePrev) break;
   }
   skriveWord = next;
   skrivePrev = next.word;
   skriveInput = "";
   skriveState = "input";
-}
-
-function skriveBody() {
-  newSkriveWord();
-  return renderSkrive();
 }
 
 function renderSkrive() {
@@ -282,7 +355,8 @@ function renderSkrive() {
     skriveState === "correct" ? "✓ Bra!" :
     skriveState === "wrong"   ? "Prøv igjen!" : "";
 
-  const kbd = SKRIVE_KBD.map((row) =>
+  const layout = SKRIVE_GAMES[skriveMode].kbd;
+  const kbd = layout.map((row) =>
     `<div class="osk-row">${row.map((k) =>
       `<button class="osk-key ${oskClass(k)}" data-action="skrive-k" data-k="${k}">${k}</button>`
     ).join("")}</div>`

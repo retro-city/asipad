@@ -650,6 +650,17 @@ body.osk-open .view { padding-bottom: 34vh; }
   line-height: 1;
 }
 
+.story-card .story-flag {
+  font-size: 9vw;
+  line-height: 1;
+}
+
+.story-card.disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.story-card.disabled:active { transform: none; }
+
 .story-card .story-title {
   font-size: 2.4vw;
   font-weight: 700;
@@ -777,7 +788,7 @@ body.osk-open .view { padding-bottom: 34vh; }
   display: flex;
   align-items: center;
   gap: 1.6vw;
-  font-size: 9vw;
+  font-size: 8vw;
   font-weight: 800;
   letter-spacing: 0.04em;
   line-height: 1;
@@ -786,14 +797,19 @@ body.osk-open .view { padding-bottom: 34vh; }
 .math-equation .m  { color: var(--fg); }
 .math-equation .op { color: var(--accent); }
 
+/* Reserve enough width for a 3-digit answer (vanskelig: sum ≤ 100 → 3 chars
+   max). The actual slots center inside, so 1- vs 2- vs 3-digit problems all
+   keep the equation in the same on-screen position. */
 .math-equation .answer {
   display: flex;
   gap: 0.6vw;
+  min-width: 19vw;
+  justify-content: center;
 }
 
 .math-equation .answer .d {
   display: inline-block;
-  min-width: 6vw;
+  min-width: 5.5vw;
   text-align: center;
   color: var(--fg);
   transition: color 200ms ease;
