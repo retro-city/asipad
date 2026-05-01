@@ -105,6 +105,82 @@ form.addEventListener("submit", async (e) => {
 
 refreshLibrary();
 
+// --- App config (heading + difficulty) ---
+
+const headingForm   = document.getElementById("heading-form");
+const headingInput  = document.getElementById("heading-input");
+const nivaaButtons  = document.getElementById("nivaa-buttons");
+const configStatus  = document.getElementById("config-status");
+
+const NIVAA_OPTIONS = [
+  { id: "lett",      label: "Lett" },
+  { id: "medium",    label: "Medium" },
+  { id: "vanskelig", label: "Vanskelig" },
+];
+
+nivaaButtons.innerHTML = NIVAA_OPTIONS.map((n) =>
+  `<button type="button" class="nivaa-btn ${n.id}" data-nivaa="${n.id}">${n.label}</button>`
+).join("");
+
+function setConfigStatus(text, kind = "") {
+  configStatus.textContent = text;
+  configStatus.className = kind;
+}
+
+async function loadAppConfig() {
+  try {
+    const r = await fetch("/api/config", { cache: "no-store" });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const cfg = await r.json();
+    headingInput.value = cfg.heading || "";
+    document.querySelectorAll(".nivaa-btn").forEach((b) =>
+      b.classList.toggle("active", b.dataset.nivaa === cfg.nivaa)
+    );
+  } catch (err) {
+    setConfigStatus(`Kunne ikke laste innstillinger: ${err.message}`, "err");
+  }
+}
+
+headingForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const h = headingInput.value.trim();
+  if (!h) return;
+  setConfigStatus("Lagrer overskrift…");
+  try {
+    const r = await fetch("/api/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ heading: h }),
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    setConfigStatus("Overskrift lagret.", "ok");
+    loadAppConfig();
+  } catch (err) {
+    setConfigStatus(`Feilet: ${err.message}`, "err");
+  }
+});
+
+nivaaButtons.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".nivaa-btn");
+  if (!btn) return;
+  const v = btn.dataset.nivaa;
+  setConfigStatus(`Setter nivå til ${v.toUpperCase()}…`);
+  try {
+    const r = await fetch("/api/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nivaa: v }),
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    setConfigStatus(`Nivå satt til ${v.toUpperCase()}.`, "ok");
+    loadAppConfig();
+  } catch (err) {
+    setConfigStatus(`Feilet: ${err.message}`, "err");
+  }
+});
+
+loadAppConfig();
+
 // --- Stories admin ---
 
 const storyList         = document.getElementById("story-list");

@@ -11,6 +11,22 @@
     <h1>Asipad admin</h1>
 
     <section>
+      <h2>Apparattilpasning</h2>
+      <p class="hint">Endringer vises på iPaden i løpet av et minutt (eller umiddelbart om noen åpner siden).</p>
+
+      <h3>Overskrift</h3>
+      <form id="heading-form" class="heading-form">
+        <input id="heading-input" type="text" maxlength="80" placeholder="ASIPad">
+        <button type="submit">Lagre</button>
+      </form>
+
+      <h3>Vanskelighetsgrad</h3>
+      <div id="nivaa-buttons" class="nivaa-buttons"></div>
+
+      <p id="config-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section>
       <h2>Bakgrunnsbilder</h2>
       <p class="hint">Trykk på et bilde for å sette det som aktiv bakgrunn. Trykk × for å slette.</p>
 

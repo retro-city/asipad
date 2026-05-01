@@ -27,6 +27,10 @@ STORIES_DIR = DATA / "stories"
 STORY_IMG_DIR = STORIES_DIR / "img"
 CURRENT_BG_FILE = DATA / "current-bg.txt"
 ACTIVE_STORIES_FILE = STORIES_DIR / "active.txt"
+CONFIG_FILE = DATA / "config.json"
+
+DEFAULT_CONFIG = {"heading": "ASIPad", "nivaa": "lett"}
+NIVAA_VALUES = ("lett", "medium", "vanskelig")
 DATA.mkdir(exist_ok=True)
 BG_DIR.mkdir(exist_ok=True)
 JOBS_DIR.mkdir(exist_ok=True)
@@ -559,7 +563,67 @@ def version():
     idx_v = max(mtimes) if mtimes else 0
     bg = current_background()
     bg_v = int(bg.stat().st_mtime) if bg else 0
-    return jsonify(version=idx_v, background=bg_v, started=STARTED)
+    return jsonify(
+        version=idx_v,
+        background=bg_v,
+        started=STARTED,
+        config=load_config(),
+    )
+
+
+# --- Runtime config (heading, nivaa) ---
+
+
+def load_config() -> dict:
+    if not CONFIG_FILE.exists():
+        return dict(DEFAULT_CONFIG)
+    try:
+        cfg = json.loads(CONFIG_FILE.read_text())
+    except Exception:
+        return dict(DEFAULT_CONFIG)
+    return {**DEFAULT_CONFIG, **(cfg if isinstance(cfg, dict) else {})}
+
+
+def save_config(cfg: dict) -> None:
+    CONFIG_FILE.write_text(json.dumps(cfg, ensure_ascii=False))
+
+
+@app.get("/api/config")
+def api_get_config():
+    return jsonify(load_config())
+
+
+@app.post("/api/config")
+def api_set_config():
+    if (resp := require_admin()) is not None:
+        return resp
+    body = request.get_json(silent=True) or {}
+    cfg = load_config()
+    if "heading" in body:
+        h = str(body.get("heading") or "").strip()
+        if h:
+            cfg["heading"] = h[:120]
+    if "nivaa" in body:
+        v = str(body.get("nivaa") or "")
+        if v in NIVAA_VALUES:
+            cfg["nivaa"] = v
+    save_config(cfg)
+    return jsonify(cfg)
+
+
+@app.post("/api/nivaa")
+def api_set_nivaa_local():
+    """Localhost-only — lets the kiosk's NIVÅ tile change difficulty
+    without going through the admin auth dance."""
+    require_local()
+    body = request.get_json(silent=True) or {}
+    v = str(body.get("value") or "")
+    if v not in NIVAA_VALUES:
+        return jsonify(error="bad value"), 400
+    cfg = load_config()
+    cfg["nivaa"] = v
+    save_config(cfg)
+    return jsonify(cfg)
 
 
 @app.route("/<path:name>")

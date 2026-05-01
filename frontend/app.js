@@ -12,17 +12,42 @@ const PAGES = {
   nivaa:         { title: "Nivå",          body: nivaaBody,      parent: "innstillinger" },
 };
 
-// --- Difficulty (NIVÅ): persisted in localStorage so it survives reloads ---
+// --- Runtime config (heading, nivaa) — fetched from /api/config, cached
+// in module state, refreshed via /api/version polling. ---
 
-const NIVAA_KEY = "asipad-nivaa";
+let kioskConfig = { heading: "ASIPad", nivaa: "lett" };
 
 function getNivaa() {
-  const v = localStorage.getItem(NIVAA_KEY);
-  return v === "medium" || v === "vanskelig" ? v : "lett";
+  return ["lett", "medium", "vanskelig"].includes(kioskConfig.nivaa)
+    ? kioskConfig.nivaa : "lett";
 }
 
 function setNivaa(v) {
-  localStorage.setItem(NIVAA_KEY, v);
+  kioskConfig.nivaa = v;
+  // POST to localhost-only endpoint so the change is server-side
+  // and propagates to other clients via the version poll.
+  fetch("/api/nivaa", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ value: v }),
+  }).catch(() => {});
+}
+
+function applyConfig(cfg) {
+  if (!cfg || typeof cfg !== "object") return;
+  const next = { ...kioskConfig, ...cfg };
+  if (JSON.stringify(next) === JSON.stringify(kioskConfig)) return;
+  kioskConfig = next;
+  // Heading text
+  const h = document.querySelector("header h1");
+  if (h && h.textContent !== kioskConfig.heading) h.textContent = kioskConfig.heading;
+  // If we're currently on a page that depends on config (TALL or NIVÅ),
+  // re-render so the new value takes effect immediately.
+  const m = location.hash.match(/^#\/(.+)/);
+  const cur = m && m[1];
+  if (cur === "tall" || cur === "nivaa") {
+    if (PAGES[cur]) pageBody.innerHTML = PAGES[cur].body();
+  }
 }
 
 function mathSumCapForNivaa() {
@@ -226,6 +251,7 @@ const SKRIVE_GAMES = {
   norsk: {
     label: "Norsk",
     flag:  "🇳🇴",
+    feedback: { correct: "✓ Bra!", wrong: "Prøv igjen!" },
     kbd: [
       ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "Å"],
       ["A", "S", "D", "F", "G", "H", "J", "K", "L", "Ø", "Æ"],
@@ -259,6 +285,7 @@ const SKRIVE_GAMES = {
   ukrainsk: {
     label: "Ukrainsk",
     flag:  "🇺🇦",
+    feedback: { correct: "✓ Молодець!", wrong: "Спробуй ще!" },
     // ЙЦУКЕН Ukrainian layout (simplified — no Ґ, no apostrophe).
     kbd: [
       ["Й", "Ц", "У", "К", "Е", "Н", "Г", "Ш", "Щ", "З", "Х", "Ї"],
@@ -351,9 +378,10 @@ function renderSkrive() {
   const slots = [...w].map((_, i) =>
     `<span class="d">${skriveInput[i] ?? "_"}</span>`
   ).join("");
+  const fb = SKRIVE_GAMES[skriveMode].feedback;
   const feedback =
-    skriveState === "correct" ? "✓ Bra!" :
-    skriveState === "wrong"   ? "Prøv igjen!" : "";
+    skriveState === "correct" ? fb.correct :
+    skriveState === "wrong"   ? fb.wrong   : "";
 
   const layout = SKRIVE_GAMES[skriveMode].kbd;
   const kbd = layout.map((row) =>
@@ -1050,13 +1078,14 @@ function applyBackground(version) {
 async function pollVersion() {
   try {
     const r = await fetch("/api/version", { cache: "no-store" });
-    const { version, background } = await r.json();
+    const { version, background, config } = await r.json();
     if (bootVersion === null) bootVersion = version;
     else if (version !== bootVersion) return location.reload();
     if (bgVersion !== background) {
       bgVersion = background;
       applyBackground(background);
     }
+    if (config) applyConfig(config);
   } catch (_) { /* server may be restarting; try again */ }
 }
 pollVersion();
