@@ -823,7 +823,9 @@ body.osk-open .view { padding-bottom: 34vh; }
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  min-height: 5vh;
+  /* Reserve enough room for the 3.4vw text plus its line-height — otherwise
+     "✓ Bra!" appearing fills more than min-height and pushes the equation up. */
+  min-height: 4.5vw;
   line-height: 1.1;
 }
 
@@ -924,7 +926,9 @@ body.osk-open .view { padding-bottom: 34vh; }
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  min-height: 4vh;
+  /* Reserve enough room for the 3vw text plus its line-height to avoid
+     pushing the question up when feedback appears. */
+  min-height: 4vw;
   line-height: 1.1;
 }
 

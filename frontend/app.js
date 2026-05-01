@@ -15,7 +15,7 @@ const PAGES = {
 // --- Runtime config (heading, nivaa) — fetched from /api/config, cached
 // in module state, refreshed via /api/version polling. ---
 
-let kioskConfig = { heading: "ASIPad", nivaa: "lett" };
+let kioskConfig = { heading: "ASIPad", nivaa: "lett", gender: "female" };
 
 function getNivaa() {
   return ["lett", "medium", "vanskelig"].includes(kioskConfig.nivaa)
@@ -360,6 +360,15 @@ function skriveUkrainskBody() {
   return renderSkrive();
 }
 
+function skriveCorrectFeedback() {
+  // Ukrainian "great job" has separate masculine and feminine forms;
+  // Norwegian "Bra!" is gender-neutral.
+  if (skriveMode === "ukrainsk") {
+    return kioskConfig.gender === "male" ? "✓ Молодець!" : "✓ Молодчинка!";
+  }
+  return SKRIVE_GAMES[skriveMode].feedback.correct;
+}
+
 function newSkriveWord() {
   const list = SKRIVE_GAMES[skriveMode].words;
   let next;
@@ -378,10 +387,9 @@ function renderSkrive() {
   const slots = [...w].map((_, i) =>
     `<span class="d">${skriveInput[i] ?? "_"}</span>`
   ).join("");
-  const fb = SKRIVE_GAMES[skriveMode].feedback;
   const feedback =
-    skriveState === "correct" ? fb.correct :
-    skriveState === "wrong"   ? fb.wrong   : "";
+    skriveState === "correct" ? skriveCorrectFeedback() :
+    skriveState === "wrong"   ? SKRIVE_GAMES[skriveMode].feedback.wrong : "";
 
   const layout = SKRIVE_GAMES[skriveMode].kbd;
   const kbd = layout.map((row) =>

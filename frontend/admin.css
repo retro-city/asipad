@@ -229,6 +229,31 @@ form#upload-form {
 .nivaa-btn.vanskelig { background: #cc4444; color: #fff; }
 .nivaa-btn.active    { border-color: #1c2440; }
 
+.gender-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.gender-btn {
+  flex: 1;
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  border: 3px solid transparent;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+  transition: border-color 120ms ease;
+}
+
+.gender-btn.male   { background: #4a90e2; }
+.gender-btn.female { background: #e24a90; }
+.gender-btn.active { border-color: #1c2440; }
+
 #config-status { margin-top: 0.5rem; min-height: 1.4em; font-weight: 500; }
 #config-status.ok  { color: #2c7a3a; }
 #config-status.err { color: #c44; }

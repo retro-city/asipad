@@ -29,8 +29,9 @@ CURRENT_BG_FILE = DATA / "current-bg.txt"
 ACTIVE_STORIES_FILE = STORIES_DIR / "active.txt"
 CONFIG_FILE = DATA / "config.json"
 
-DEFAULT_CONFIG = {"heading": "ASIPad", "nivaa": "lett"}
+DEFAULT_CONFIG = {"heading": "ASIPad", "nivaa": "lett", "gender": "female"}
 NIVAA_VALUES = ("lett", "medium", "vanskelig")
+GENDER_VALUES = ("male", "female")
 DATA.mkdir(exist_ok=True)
 BG_DIR.mkdir(exist_ok=True)
 JOBS_DIR.mkdir(exist_ok=True)
@@ -607,6 +608,10 @@ def api_set_config():
         v = str(body.get("nivaa") or "")
         if v in NIVAA_VALUES:
             cfg["nivaa"] = v
+    if "gender" in body:
+        g = str(body.get("gender") or "")
+        if g in GENDER_VALUES:
+            cfg["gender"] = g
     save_config(cfg)
     return jsonify(cfg)
 

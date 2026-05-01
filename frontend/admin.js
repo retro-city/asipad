@@ -110,6 +110,7 @@ refreshLibrary();
 const headingForm   = document.getElementById("heading-form");
 const headingInput  = document.getElementById("heading-input");
 const nivaaButtons  = document.getElementById("nivaa-buttons");
+const genderButtons = document.getElementById("gender-buttons");
 const configStatus  = document.getElementById("config-status");
 
 const NIVAA_OPTIONS = [
@@ -118,8 +119,17 @@ const NIVAA_OPTIONS = [
   { id: "vanskelig", label: "Vanskelig" },
 ];
 
+const GENDER_OPTIONS = [
+  { id: "female", label: "Jente" },
+  { id: "male",   label: "Gutt" },
+];
+
 nivaaButtons.innerHTML = NIVAA_OPTIONS.map((n) =>
   `<button type="button" class="nivaa-btn ${n.id}" data-nivaa="${n.id}">${n.label}</button>`
+).join("");
+
+genderButtons.innerHTML = GENDER_OPTIONS.map((g) =>
+  `<button type="button" class="gender-btn ${g.id}" data-gender="${g.id}">${g.label}</button>`
 ).join("");
 
 function setConfigStatus(text, kind = "") {
@@ -135,6 +145,9 @@ async function loadAppConfig() {
     headingInput.value = cfg.heading || "";
     document.querySelectorAll(".nivaa-btn").forEach((b) =>
       b.classList.toggle("active", b.dataset.nivaa === cfg.nivaa)
+    );
+    document.querySelectorAll(".gender-btn").forEach((b) =>
+      b.classList.toggle("active", b.dataset.gender === cfg.gender)
     );
   } catch (err) {
     setConfigStatus(`Kunne ikke laste innstillinger: ${err.message}`, "err");
@@ -173,6 +186,25 @@ nivaaButtons.addEventListener("click", async (e) => {
     });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     setConfigStatus(`Nivå satt til ${v.toUpperCase()}.`, "ok");
+    loadAppConfig();
+  } catch (err) {
+    setConfigStatus(`Feilet: ${err.message}`, "err");
+  }
+});
+
+genderButtons.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".gender-btn");
+  if (!btn) return;
+  const g = btn.dataset.gender;
+  setConfigStatus(`Setter kjønn til ${g.toUpperCase()}…`);
+  try {
+    const r = await fetch("/api/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gender: g }),
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    setConfigStatus(`Kjønn lagret.`, "ok");
     loadAppConfig();
   } catch (err) {
     setConfigStatus(`Feilet: ${err.message}`, "err");
