@@ -643,40 +643,9 @@ def api_set_nivaa_local():
 # --- Calendar / events (iCal-backed) ---
 
 
-def _seed_events() -> list[dict]:
-    """If the events file is missing on first run, seed it with the kiosk's
-    historical hard-coded events so existing installs don't lose the
-    weekly Svømming / Musikkleik markers and Friend's birthday."""
-    return [
-        {
-            "uid": "asipad-svomming@kiosk",
-            "summary": "Svømming",
-            "dtstart": "2026-01-06",
-            "rrule": "FREQ=WEEKLY;BYDAY=TU",
-            "icon": "swim",
-        },
-        {
-            "uid": "asipad-musikkleik@kiosk",
-            "summary": "Musikkleik",
-            "dtstart": "2026-01-07",
-            "rrule": "FREQ=WEEKLY;BYDAY=WE",
-            "icon": "music",
-        },
-        {
-            "uid": "asipad-nova-bursdag@kiosk",
-            "summary": "Bursdag",
-            "dtstart": "2026-05-01",
-            "rrule": "FREQ=YEARLY",
-            "icon": "cake",
-        },
-    ]
-
-
 def load_events() -> list[dict]:
     if not EVENTS_FILE.exists():
-        events = _seed_events()
-        save_events(events)
-        return events
+        return []
     try:
         data = json.loads(EVENTS_FILE.read_text())
         return data if isinstance(data, list) else []
