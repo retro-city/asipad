@@ -3,7 +3,7 @@ const PAGES = {
   lese:          { title: "Lese",          body: leseBody },
   "lese-read":   { title: "Lese",          body: leseReaderBody, parent: "lese" },
   skrive:        { title: "Skrive",        body: comingSoon },
-  tall:          { title: "Tall",          body: comingSoon },
+  tall:          { title: "Tall",          body: tallBody },
   jobb:          { title: "Jobb",          body: jobbBody },
   innstillinger: { title: "Innstillinger", body: settingsBody },
   bakgrunn:      { title: "Bakgrunn",      body: backgroundBody, parent: "innstillinger" },
@@ -107,6 +107,92 @@ function shiftStoryPage(delta) {
     Math.min(activeStory.pages.length - 1, activeStoryPage + delta)
   );
   pageBody.innerHTML = leseReaderBody();
+}
+
+// --- TALL: simple addition game ---
+
+let mathA = 0;
+let mathB = 0;
+let mathInput = "";
+let mathState = "input"; // "input" | "correct" | "wrong"
+
+function newMathProblem() {
+  mathA = 1 + Math.floor(Math.random() * 9);
+  mathB = 1 + Math.floor(Math.random() * 9);
+  mathInput = "";
+  mathState = "input";
+}
+
+function tallBody() {
+  newMathProblem();
+  return renderTall();
+}
+
+function renderTall() {
+  const expected = String(mathA + mathB);
+  const slots = [];
+  for (let i = 0; i < expected.length; i++) {
+    slots.push(`<span class="d">${mathInput[i] ?? "_"}</span>`);
+  }
+  const feedback =
+    mathState === "correct" ? "✓ Bra!" :
+    mathState === "wrong"   ? "Prøv igjen!" : "";
+
+  const padKeys = [7, 8, 9, 4, 5, 6, 1, 2, 3];
+  return `
+    <div class="math-split">
+      <div class="math-board ${mathState}">
+        <div class="math-equation">
+          <span class="m">${mathA}</span>
+          <span class="op">+</span>
+          <span class="m">${mathB}</span>
+          <span class="op">=</span>
+          <span class="answer">${slots.join("")}</span>
+        </div>
+        <div class="math-feedback">${feedback}</div>
+      </div>
+      <div class="math-pad">
+        ${padKeys.map((n) =>
+          `<button class="math-key" data-action="math-d" data-d="${n}">${n}</button>`
+        ).join("")}
+        <button class="math-key clear" data-action="math-clear">C</button>
+        <button class="math-key" data-action="math-d" data-d="0">0</button>
+        <button class="math-key eq" data-action="math-eq">=</button>
+      </div>
+    </div>`;
+}
+
+function mathDigit(d) {
+  if (mathState === "correct") return;          // wait for next problem
+  if (mathState === "wrong") mathState = "input";
+  const maxLen = String(mathA + mathB).length;
+  if (mathInput.length >= maxLen) return;
+  mathInput += d;
+  pageBody.innerHTML = renderTall();
+}
+
+function mathClear() {
+  if (mathState === "correct") return;
+  if (mathState === "wrong") mathState = "input";
+  if (mathInput.length === 0) return;
+  mathInput = mathInput.slice(0, -1);
+  pageBody.innerHTML = renderTall();
+}
+
+function mathEquals() {
+  if (mathState === "correct") return;
+  const got = parseInt(mathInput || "-1", 10);
+  if (got === mathA + mathB) {
+    mathState = "correct";
+    pageBody.innerHTML = renderTall();
+    setTimeout(() => {
+      newMathProblem();
+      pageBody.innerHTML = renderTall();
+    }, 1500);
+  } else {
+    mathState = "wrong";
+    pageBody.innerHTML = renderTall();
+  }
 }
 
 function gameBody() {
@@ -495,6 +581,12 @@ pageBody.addEventListener("pointerup", (e) => {
   }
   if (action === "story-prev") return shiftStoryPage(-1);
   if (action === "story-next") return shiftStoryPage(1);
+  if (action === "math-d") {
+    const d = e.target.closest("[data-d]")?.dataset?.d;
+    if (d != null) return mathDigit(d);
+  }
+  if (action === "math-clear") return mathClear();
+  if (action === "math-eq")    return mathEquals();
   const route = e.target?.closest?.("[data-route]")?.dataset?.route;
   if (route && PAGES[route]) return showPage(route);
   const bgId = e.target?.closest?.("[data-bg-id]")?.dataset?.bgId;
