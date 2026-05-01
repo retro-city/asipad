@@ -723,15 +723,15 @@ body.osk-open .view { padding-bottom: 34vh; }
 .story-text {
   flex: 1;
   min-width: 0;
-  font-size: 3.2vw;
+  font-size: 2.6vw;
   line-height: 1.5;
   font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   text-align: left;
-  display: flex;
-  align-items: center;
-  padding: 0 1vw;
+  /* Block layout (not flex-centered) — keeps the top visible when the
+     text is taller than the box and scrollbar takes over. */
+  padding: 1vh 1vw;
   overflow-y: auto;
 }
 
