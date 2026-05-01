@@ -258,6 +258,47 @@ form#upload-form {
 #config-status.ok  { color: #2c7a3a; }
 #config-status.err { color: #c44; }
 
+/* Calendar admin */
+.calendar-info {
+  margin: 0 0 0.75rem 0;
+  color: #6a7090;
+  font-size: 0.95rem;
+}
+
+.calendar-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+#calendar-export {
+  padding: 0.55rem 1rem;
+  border-radius: 6px;
+  background: #2c3e7a;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+#calendar-clear {
+  padding: 0.55rem 1rem;
+  border-radius: 6px;
+  border: none;
+  background: #c44;
+  color: #fff;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+#calendar-status { margin-top: 0.6rem; min-height: 1.4em; font-weight: 500; }
+#calendar-status.ok  { color: #2c7a3a; }
+#calendar-status.err { color: #c44; }
+
 /* Stories admin */
 .active-slots {
   display: flex;

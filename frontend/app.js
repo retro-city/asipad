@@ -458,39 +458,57 @@ function loadGameIframe() {
   pageBody.innerHTML = `<iframe src="${PAGES.spill.url}" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
 }
 
-// Daily events shown on the right half of the calendar page.
-// Replace this list with a fetch() against a real calendar (CalDAV,
-// Google Calendar, etc.) when ready — the renderer just consumes whatever
-// `eventsForDate(d)` returns.
-const EVENTS = [
-  { match: (d) => d.getDay() === 2,                            label: "Svømming",         icon: "swim" },
-  { match: (d) => d.getDay() === 3,                            label: "Musikkleik",       icon: "music" },
-  { match: (d) => d.getMonth() === 4 && d.getDate() === 1,     label: "Bursdag", icon: "cake" },
-];
-
+// Calendar events live on the server now (data/events.json, importable
+// from .ics). The kiosk fetches the day's events on render and caches the
+// result keyed by date.
 const EVENT_ICONS = {
   swim:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="8" r="1.6"/><path d="M8 9c2 -1 5 -1 8 1"/><path d="M2 15c2 -1.5 4 -1.5 6 0s4 1.5 6 0 4 -1.5 6 0"/><path d="M2 19c2 -1.5 4 -1.5 6 0s4 1.5 6 0 4 -1.5 6 0"/></svg>',
   music: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.3" fill="currentColor"/><circle cx="17.5" cy="15" r="2.3" fill="currentColor"/><line x1="8.8" y1="17" x2="8.8" y2="6"/><line x1="19.8" y1="15" x2="19.8" y2="4"/><line x1="8.8" y1="6" x2="19.8" y2="4"/></svg>',
   cake:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="18" height="9" rx="1.2"/><path d="M3 16c3 1.6 6 1.6 9 0s6 -1.6 9 0"/><line x1="12" y1="12" x2="12" y2="6"/><path d="M12 6c-1 -0.8 -1 -2.5 0 -3 1 0.5 1 2.2 0 3z" fill="currentColor"/></svg>',
+  event: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/></svg>',
 };
 
-function eventsForDate(d) {
-  return EVENTS.filter((e) => e.match(d));
+const eventsCache = new Map(); // "YYYY-MM-DD" → array of {summary,icon}
+let calendarEventsForRender = []; // events for the date currently shown
+
+function dateKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+async function fetchEventsFor(d) {
+  const key = dateKey(d);
+  if (eventsCache.has(key)) return eventsCache.get(key);
+  try {
+    const r = await fetch(`/api/events/${key}`, { cache: "no-store" });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const list = await r.json();
+    eventsCache.set(key, list);
+    return list;
+  } catch (_) {
+    return [];
+  }
 }
 
 let calendarDate = null;
 
 function calendarBody() {
   const d = calendarDate ?? new Date();
+  // Sync render-state to the cache for this date, then fire async fetch
+  // so a missing cache entry gets filled and we re-render on arrival.
+  calendarEventsForRender = eventsCache.get(dateKey(d)) ?? [];
+  loadEventsForCurrentDate();
   const weekday = d.toLocaleDateString("nb-NO", { weekday: "long" });
   const month = d.toLocaleDateString("nb-NO", { month: "long" });
-  const events = eventsForDate(d);
+  const events = calendarEventsForRender;
   const isToday = sameYMD(d, new Date());
   const eventsHtml = events.length
     ? events.map((e) => `
         <div class="event">
-          <div class="event-icon">${EVENT_ICONS[e.icon] ?? ""}</div>
-          <div class="event-label">${e.label}</div>
+          <div class="event-icon">${EVENT_ICONS[e.icon || "event"] ?? EVENT_ICONS.event}</div>
+          <div class="event-label">${escapeHtml(e.summary || "")}</div>
         </div>`).join("")
     : `<div class="no-events">${isToday ? "Ingen avtaler i dag" : "Ingen avtaler"}</div>`;
 
@@ -519,6 +537,21 @@ function shiftCalendar(days) {
   const next = new Date(base);
   next.setDate(next.getDate() + days);
   calendarDate = next;
+  calendarEventsForRender = eventsCache.get(dateKey(next)) ?? [];
+  pageBody.innerHTML = calendarBody();
+}
+
+async function loadEventsForCurrentDate() {
+  const d = calendarDate ?? new Date();
+  const key = dateKey(d);
+  const wanted = key;
+  const list = await fetchEventsFor(d);
+  // Only re-render if the user is still on the same date and on /kalender.
+  if (location.hash !== "#/kalender") return;
+  const stillOnSameDate = dateKey(calendarDate ?? new Date()) === wanted;
+  if (!stillOnSameDate) return;
+  if (JSON.stringify(list) === JSON.stringify(calendarEventsForRender)) return;
+  calendarEventsForRender = list;
   pageBody.innerHTML = calendarBody();
 }
 

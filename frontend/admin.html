@@ -50,6 +50,28 @@
     </section>
 
     <section>
+      <h2>Kalender</h2>
+      <p class="hint">Last opp en .ics-fil for å legge til avtaler. Like avtaler (samme UID + dato) hoppes over.</p>
+
+      <p id="calendar-info" class="calendar-info">Laster…</p>
+
+      <form id="calendar-import" class="heading-form">
+        <label class="file-input">
+          <input type="file" id="calendar-file" name="file" accept=".ics,text/calendar" required>
+          <span id="calendar-file-label">Velg .ics-fil…</span>
+        </label>
+        <button type="submit">Importer</button>
+      </form>
+
+      <div class="calendar-actions">
+        <a id="calendar-export" href="/api/calendar/export" download="asipad.ics">Eksporter .ics</a>
+        <button id="calendar-clear" type="button" class="danger">Tøm kalender</button>
+      </div>
+
+      <p id="calendar-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section>
       <h2>Historier</h2>
       <p class="hint">Aktive historier vises på iPaden under LESE. Du kan lagre flere og bytte når du vil.</p>
 

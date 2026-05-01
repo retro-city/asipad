@@ -13,10 +13,18 @@ import re
 import secrets
 import subprocess
 import time
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from flask import Flask, Response, abort, jsonify, request, send_from_directory
 from PIL import Image, ImageOps
+
+try:
+    from icalendar import Calendar, Event as IcalEvent
+    from dateutil.rrule import rrulestr
+    ICAL_AVAILABLE = True
+except ImportError:
+    ICAL_AVAILABLE = False
 
 ROOT = Path(__file__).resolve().parent.parent
 FRONTEND = ROOT / "frontend"
@@ -28,6 +36,7 @@ STORY_IMG_DIR = STORIES_DIR / "img"
 CURRENT_BG_FILE = DATA / "current-bg.txt"
 ACTIVE_STORIES_FILE = STORIES_DIR / "active.txt"
 CONFIG_FILE = DATA / "config.json"
+EVENTS_FILE = DATA / "events.json"
 
 DEFAULT_CONFIG = {"heading": "ASIPad", "nivaa": "lett", "gender": "female"}
 NIVAA_VALUES = ("lett", "medium", "vanskelig")
@@ -629,6 +638,217 @@ def api_set_nivaa_local():
     cfg["nivaa"] = v
     save_config(cfg)
     return jsonify(cfg)
+
+
+# --- Calendar / events (iCal-backed) ---
+
+
+def _seed_events() -> list[dict]:
+    """If the events file is missing on first run, seed it with the kiosk's
+    historical hard-coded events so existing installs don't lose the
+    weekly Svømming / Musikkleik markers and Friend's birthday."""
+    return [
+        {
+            "uid": "asipad-svomming@kiosk",
+            "summary": "Svømming",
+            "dtstart": "2026-01-06",
+            "rrule": "FREQ=WEEKLY;BYDAY=TU",
+            "icon": "swim",
+        },
+        {
+            "uid": "asipad-musikkleik@kiosk",
+            "summary": "Musikkleik",
+            "dtstart": "2026-01-07",
+            "rrule": "FREQ=WEEKLY;BYDAY=WE",
+            "icon": "music",
+        },
+        {
+            "uid": "asipad-nova-bursdag@kiosk",
+            "summary": "Bursdag",
+            "dtstart": "2026-05-01",
+            "rrule": "FREQ=YEARLY",
+            "icon": "cake",
+        },
+    ]
+
+
+def load_events() -> list[dict]:
+    if not EVENTS_FILE.exists():
+        events = _seed_events()
+        save_events(events)
+        return events
+    try:
+        data = json.loads(EVENTS_FILE.read_text())
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def save_events(events: list[dict]) -> None:
+    EVENTS_FILE.write_text(json.dumps(events, ensure_ascii=False, indent=2))
+
+
+def _guess_icon(summary: str) -> str:
+    s = (summary or "").lower()
+    if any(k in s for k in ("svøm", "swim", "basseng")):     return "swim"
+    if any(k in s for k in ("musikk", "music", "song")):     return "music"
+    if any(k in s for k in ("bursdag", "kake", "birthday")): return "cake"
+    return "event"
+
+
+def _parse_ical(content: bytes) -> list[dict]:
+    """Parse an iCalendar payload into our flat event dicts."""
+    if not ICAL_AVAILABLE:
+        raise RuntimeError("icalendar library not available")
+    cal = Calendar.from_ical(content)
+    out = []
+    for comp in cal.walk("VEVENT"):
+        uid = str(comp.get("UID") or "").strip()
+        summary = str(comp.get("SUMMARY") or "").strip()
+        dtstart_field = comp.get("DTSTART")
+        if not uid or not summary or dtstart_field is None:
+            continue
+        dt = dtstart_field.dt
+        if isinstance(dt, datetime):
+            dtstart_str = dt.date().isoformat()  # we only care about the day
+        else:
+            dtstart_str = dt.isoformat()
+        rrule_str = None
+        rrule_field = comp.get("RRULE")
+        if rrule_field is not None:
+            rrule_str = rrule_field.to_ical().decode().strip()
+        out.append({
+            "uid": uid,
+            "summary": summary,
+            "dtstart": dtstart_str,
+            "rrule": rrule_str,
+            "icon": _guess_icon(summary),
+        })
+    return out
+
+
+def _event_occurs_on(ev: dict, target: date) -> bool:
+    try:
+        start = date.fromisoformat(str(ev.get("dtstart") or ""))
+    except ValueError:
+        return False
+    rrule_str = ev.get("rrule")
+    if not rrule_str:
+        return start == target
+    try:
+        rule = rrulestr(rrule_str, dtstart=datetime.combine(start, datetime.min.time()))
+        target_dt = datetime.combine(target, datetime.min.time())
+        # between(inc=True) is inclusive on both ends, so it pulls in the
+        # next day's occurrence too. Filter on .date() equality.
+        for occ in rule.between(target_dt, target_dt + timedelta(days=1), inc=True):
+            if occ.date() == target:
+                return True
+        return False
+    except Exception:
+        return False
+
+
+def _events_to_ical(events: list[dict]) -> str:
+    """Serialize stored events back to RFC-5545 .ics text."""
+    if not ICAL_AVAILABLE:
+        raise RuntimeError("icalendar library not available")
+    cal = Calendar()
+    cal.add("prodid", "-//asipad//kiosk//NO")
+    cal.add("version", "2.0")
+    for ev in events:
+        comp = IcalEvent()
+        comp.add("uid", ev.get("uid") or f"asipad-{int(time.time()*1000)}@kiosk")
+        comp.add("summary", ev.get("summary") or "")
+        try:
+            comp.add("dtstart", date.fromisoformat(str(ev.get("dtstart") or "")))
+        except ValueError:
+            continue
+        if ev.get("rrule"):
+            try:
+                cleaned = ev["rrule"]
+                if cleaned.upper().startswith("RRULE:"):
+                    cleaned = cleaned.split(":", 1)[1]
+                # icalendar wants a vRecur dict — round-trip through string parse
+                from icalendar.prop import vRecur
+                comp.add("rrule", vRecur.from_ical(cleaned))
+            except Exception:
+                pass
+        cal.add_component(comp)
+    return cal.to_ical().decode()
+
+
+@app.get("/api/calendar")
+def api_calendar_info():
+    events = load_events()
+    return jsonify(count=len(events), ical_available=ICAL_AVAILABLE)
+
+
+@app.get("/api/calendar/export")
+def api_export_calendar():
+    if not ICAL_AVAILABLE:
+        return jsonify(error="icalendar library not available"), 501
+    body = _events_to_ical(load_events())
+    return Response(
+        body,
+        mimetype="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="asipad.ics"'},
+    )
+
+
+@app.post("/api/calendar/import")
+def api_import_calendar():
+    if (resp := require_admin()) is not None:
+        return resp
+    if not ICAL_AVAILABLE:
+        return jsonify(error="icalendar library not available on server"), 501
+    file = request.files.get("file")
+    if file is None or not file.filename:
+        return jsonify(error="missing file"), 400
+    try:
+        new = _parse_ical(file.read())
+    except Exception as e:
+        return jsonify(error=f"could not parse: {e}"), 400
+    existing = load_events()
+    seen = {(e.get("uid"), e.get("dtstart")) for e in existing}
+    added = 0
+    skipped = 0
+    for ev in new:
+        key = (ev["uid"], ev["dtstart"])
+        if key in seen:
+            skipped += 1
+            continue
+        seen.add(key)
+        existing.append(ev)
+        added += 1
+    save_events(existing)
+    return jsonify(ok=True, added=added, skipped=skipped, total=len(existing))
+
+
+@app.delete("/api/calendar")
+def api_clear_calendar():
+    if (resp := require_admin()) is not None:
+        return resp
+    # Write an empty list rather than removing the file — otherwise the
+    # next load_events() would re-seed the default events.
+    save_events([])
+    return jsonify(ok=True)
+
+
+@app.get("/api/events/<datestr>")
+def api_events_on(datestr: str):
+    try:
+        target = date.fromisoformat(datestr)
+    except ValueError:
+        return jsonify(error="bad date"), 400
+    out = []
+    for ev in load_events():
+        if _event_occurs_on(ev, target):
+            out.append({
+                "uid":     ev.get("uid"),
+                "summary": ev.get("summary"),
+                "icon":    ev.get("icon") or "event",
+            })
+    return jsonify(out)
 
 
 @app.route("/<path:name>")

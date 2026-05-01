@@ -13,7 +13,8 @@ fi
 echo "==> apt packages"
 sudo apt-get update -qq
 sudo apt-get install -y --no-install-recommends \
-  python3-flask python3-pil curl zram-tools cage cog wvkbd
+  python3-flask python3-pil python3-icalendar python3-dateutil \
+  curl zram-tools cage cog wvkbd
 
 echo "==> zram swap (compressed RAM-backed swap, faster than SD)"
 # zram-tools enables a default zram swap device on boot. Sized at 50% of RAM

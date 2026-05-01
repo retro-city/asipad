@@ -213,6 +213,77 @@ genderButtons.addEventListener("click", async (e) => {
 
 loadAppConfig();
 
+// --- Calendar (iCal import / export / clear) ---
+
+const calInfo       = document.getElementById("calendar-info");
+const calStatus     = document.getElementById("calendar-status");
+const calForm       = document.getElementById("calendar-import");
+const calFile       = document.getElementById("calendar-file");
+const calFileLabel  = document.getElementById("calendar-file-label");
+const calClear      = document.getElementById("calendar-clear");
+
+function setCalStatus(text, kind = "") {
+  calStatus.textContent = text;
+  calStatus.className = kind;
+}
+
+async function refreshCalendarInfo() {
+  try {
+    const r = await fetch("/api/calendar", { cache: "no-store" });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    if (data.ical_available === false) {
+      calInfo.textContent = "iCalendar-biblioteket mangler på serveren — import/eksport ikke tilgjengelig.";
+    } else {
+      calInfo.textContent = `${data.count} avtale${data.count === 1 ? "" : "r"} lagret.`;
+    }
+  } catch (err) {
+    calInfo.textContent = `Kunne ikke laste kalenderinfo: ${err.message}`;
+  }
+}
+
+calFile.addEventListener("change", () => {
+  calFileLabel.textContent = calFile.files[0]?.name ?? "Velg .ics-fil…";
+});
+
+calForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = calFile.files[0];
+  if (!f) return;
+  const fd = new FormData();
+  fd.append("file", f);
+  setCalStatus("Importerer…");
+  try {
+    const r = await fetch("/api/calendar/import", { method: "POST", body: fd });
+    if (!r.ok) {
+      const t = await r.text();
+      throw new Error(t || `HTTP ${r.status}`);
+    }
+    const data = await r.json();
+    setCalStatus(`La til ${data.added}, hoppet over ${data.skipped}. Totalt nå: ${data.total}.`, "ok");
+    calFile.value = "";
+    calFileLabel.textContent = "Velg .ics-fil…";
+    refreshCalendarInfo();
+  } catch (err) {
+    setCalStatus(`Feilet: ${err.message}`, "err");
+  }
+});
+
+calClear.addEventListener("click", async () => {
+  if (!confirm("Tømme hele kalenderen? Dette kan ikke angres.")) return;
+  setCalStatus("Tømmer…");
+  try {
+    const r = await fetch("/api/calendar", { method: "DELETE" });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    setCalStatus("Kalender tømt.", "ok");
+    refreshCalendarInfo();
+  } catch (err) {
+    setCalStatus(`Feilet: ${err.message}`, "err");
+  }
+});
+
+refreshCalendarInfo();
+
 // --- Stories admin ---
 
 const storyList         = document.getElementById("story-list");
