@@ -480,6 +480,131 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "F5" || (e.ctrlKey && (e.key === "r" || e.key === "R"))) e.preventDefault();
 });
 
+// --- On-screen keyboard (Norwegian) ---
+// Pure-HTML keyboard; auto-shows when a text input/textarea gets focus.
+// Independent of wvkbd so it works regardless of compositor protocol quirks.
+
+const OSK_LOWER = [
+  ["1","2","3","4","5","6","7","8","9","0","⌫"],
+  ["q","w","e","r","t","y","u","i","o","p","å"],
+  ["a","s","d","f","g","h","j","k","l","ø","æ"],
+  ["⇧","z","x","c","v","b","n","m",",",".","⏎"],
+];
+const OSK_UPPER = [
+  ["1","2","3","4","5","6","7","8","9","0","⌫"],
+  ["Q","W","E","R","T","Y","U","I","O","P","Å"],
+  ["A","S","D","F","G","H","J","K","L","Ø","Æ"],
+  ["⇧","Z","X","C","V","B","N","M","!","?","⏎"],
+];
+
+let oskEl = null;
+let oskTarget = null;
+let oskShift = false;
+
+function buildOsk() {
+  if (oskEl) return;
+  oskEl = document.createElement("div");
+  oskEl.className = "osk hidden";
+  document.body.appendChild(oskEl);
+  renderOsk();
+  // Don't let pointerdown on the keyboard blur the input.
+  oskEl.addEventListener("pointerdown", (e) => e.preventDefault());
+  oskEl.addEventListener("pointerup", (e) => {
+    const btn = e.target.closest(".osk-key");
+    if (!btn) return;
+    handleOskKey(btn.dataset.key);
+  });
+}
+
+function renderOsk() {
+  const rows = oskShift ? OSK_UPPER : OSK_LOWER;
+  const grid = rows.map((row) =>
+    `<div class="osk-row">${row.map((k) =>
+      `<button type="button" class="osk-key ${oskClass(k)}" data-key="${k}">${k}</button>`
+    ).join("")}</div>`
+  ).join("");
+  const bottom = `
+    <div class="osk-row">
+      <button type="button" class="osk-key osk-hide" data-key="hide">▾</button>
+      <button type="button" class="osk-key osk-space" data-key=" ">space</button>
+    </div>`;
+  oskEl.innerHTML = grid + bottom;
+}
+
+function oskClass(k) {
+  if (k === "⌫") return "osk-back";
+  if (k === "⏎") return "osk-enter";
+  if (k === "⇧") return "osk-shift" + (oskShift ? " active" : "");
+  return "";
+}
+
+function handleOskKey(key) {
+  if (!oskTarget) return;
+  if (key === "hide")  return hideOsk();
+  if (key === "⇧")     { oskShift = !oskShift; renderOsk(); return; }
+  if (key === "⌫")     return oskBackspace();
+  if (key === "⏎")     {
+    if (oskTarget.tagName === "TEXTAREA") return oskInsert("\n");
+    return; // ignore enter on single-line inputs
+  }
+  oskInsert(key);
+  if (oskShift) { oskShift = false; renderOsk(); } // sticky shift one-shot
+}
+
+function oskInsert(text) {
+  const el = oskTarget;
+  const start = el.selectionStart ?? el.value.length;
+  const end = el.selectionEnd ?? start;
+  el.value = el.value.slice(0, start) + text + el.value.slice(end);
+  el.selectionStart = el.selectionEnd = start + text.length;
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function oskBackspace() {
+  const el = oskTarget;
+  const start = el.selectionStart ?? el.value.length;
+  const end = el.selectionEnd ?? start;
+  if (start === end && start === 0) return;
+  if (start === end) {
+    el.value = el.value.slice(0, start - 1) + el.value.slice(end);
+    el.selectionStart = el.selectionEnd = start - 1;
+  } else {
+    el.value = el.value.slice(0, start) + el.value.slice(end);
+    el.selectionStart = el.selectionEnd = start;
+  }
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function showOsk(target) {
+  buildOsk();
+  oskTarget = target;
+  oskEl.classList.remove("hidden");
+  document.body.classList.add("osk-open");
+}
+
+function hideOsk() {
+  if (!oskEl) return;
+  oskEl.classList.add("hidden");
+  oskTarget = null;
+  document.body.classList.remove("osk-open");
+}
+
+document.addEventListener("focusin", (e) => {
+  const t = e.target;
+  if (t.tagName === "TEXTAREA" ||
+      (t.tagName === "INPUT" && !["button","submit","checkbox","radio","file"].includes(t.type))) {
+    showOsk(t);
+  }
+});
+
+document.addEventListener("focusout", () => {
+  // give the keyboard a moment to refocus the input on tap
+  setTimeout(() => {
+    const a = document.activeElement;
+    if (!a || (a.tagName !== "INPUT" && a.tagName !== "TEXTAREA")) hideOsk();
+  }, 80);
+});
+
 // Background + version polling: reload kiosk on frontend changes,
 // hot-swap background image when the admin uploads a new one.
 let bootVersion = null;
