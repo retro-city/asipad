@@ -20,11 +20,11 @@ USB hub, or use a Pi 4.
 
 1. Flash Raspberry Pi OS (Trixie / Bookworm successor) using **Raspberry Pi
    Imager**. In the imager's advanced options, set:
-   - Hostname: `pitablet`
+   - Hostname: `asipad`
    - User: `asi`, password: `asi`
    - Wi-Fi: your network
    - Enable SSH (with public-key auth pointing at your laptop's `~/.ssh/id_ed25519.pub`)
-2. Boot the Pi. Confirm `ssh asi@pitablet` works without a password.
+2. Boot the Pi. Confirm `ssh asi@asipad` works without a password.
 3. From your laptop:
 
    ```sh
@@ -43,7 +43,7 @@ USB hub, or use a Pi 4.
 4. Reboot:
 
    ```sh
-   ssh asi@pitablet sudo /sbin/reboot
+   ssh asi@asipad sudo /sbin/reboot
    ```
 
 5. The tablet should come up directly into the kiosk within ~10 s on a Pi 4,
@@ -63,12 +63,13 @@ so a `sync` typically refreshes the tablet within seconds with no manual step.
 
 ## Admin UI
 
-Open `http://pitablet:8080/admin` from any computer on the LAN. Login: `admin`
-/ `asipad` (HTTP basic). Change the password by writing the new value into
+Open `http://asipad:8080/admin` (or `http://asipad.local:8080/admin` if your
+laptop resolves only via mDNS) from any computer on the LAN. Login: `admin` /
+`asipad` (HTTP basic). Change the password by writing the new value into
 `~/.asipad-admin-password` on the Pi:
 
 ```sh
-ssh asi@pitablet 'echo "new-password" > ~/.asipad-admin-password'
+ssh asi@asipad 'echo "new-password" > ~/.asipad-admin-password'
 ```
 
 The admin UI lets you upload / clear the kiosk background image. Shutdown and
@@ -91,7 +92,7 @@ ships it; the kiosk auto-reloads.
 
 ```
                   +----------------------------+
-                  |  Pi (asi@pitablet)       |
+                  |  Pi (asi@asipad)           |
                   |                            |
    browser  --->  |  cog (kiosk)  --HTTP-->  python3 Flask  --> data/
    localhost      |    ^                       127.0.0.1:8080      (uploaded bg)
@@ -134,7 +135,7 @@ asipad/
 │   ├── install.sh            # idempotent installer, run on the Pi
 │   ├── kiosk-server.service  # Flask backend
 │   ├── asipad-kiosk.service  # cage + cog on tty1
-│   └── sudoers-kiosk         # passwordless poweroff/reboot for asi
+│   └── sudoers-kiosk         # passwordless poweroff/reboot for the kiosk user
 ├── server/
 │   └── app.py                # Flask: serves frontend, /admin, /api/*
 ├── frontend/

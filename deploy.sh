@@ -5,7 +5,7 @@
 #   ./deploy.sh reboot   reboot the Pi
 set -euo pipefail
 
-HOST="${HOST:-asi@pitablet}"
+HOST="${HOST:-asi@asipad.local}"
 DEST="/home/asi/asipad"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
