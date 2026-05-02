@@ -108,21 +108,23 @@ ships it; the kiosk auto-reloads.
 
 ## Architecture
 
-```
-                  +----------------------------+
-                  |  Pi (asi@asipad)           |
-                  |                            |
-   browser  --->  |  cog (kiosk)  --HTTP-->  python3 Flask  --> data/
-   localhost      |    ^                       127.0.0.1:8080      (uploaded bg)
-                  |    |                       0.0.0.0:8080 (LAN, admin)
-                  |  cage (Wayland)            |
-                  |    |                       systemd:
-                  |  /dev/tty1                   kiosk-server.service
-                  |                              asipad-kiosk.service
-                  +----------------------------+
-                           |  HDMI
-                           v
-                    Touchscreen panel
+```mermaid
+flowchart TB
+    laptop["Laptop<br/>LAN admin browser"]
+    subgraph pi["Pi (asi@asipad)"]
+        direction TB
+        cog["cog<br/>WPE-WebKit kiosk browser"]
+        cage["cage<br/>Wayland on /dev/tty1"]
+        flask["python3 Flask<br/>0.0.0.0:8080"]
+        data[("data/<br/>backgrounds, stories,<br/>jobs, events, config")]
+        cage --> cog
+        cog -- "HTTP 127.0.0.1" --> flask
+        flask --> data
+    end
+    panel(["Touchscreen panel"])
+    laptop -- "HTTP /admin" --> flask
+    cage -- HDMI --> panel
+    panel -. touch .-> cage
 ```
 
 - `kiosk-server.service` — Flask app, `server/app.py`. Bound on `0.0.0.0:8080`
