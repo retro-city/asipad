@@ -7,8 +7,10 @@ Serves the kiosk frontend, an admin UI, and a small power API on port 8080.
 - /admin and /admin/* require HTTP basic auth (see ADMIN_PW_FILE).
 """
 import io
+import ipaddress
 import json
 import logging
+import os
 import re
 import secrets
 import subprocess
@@ -112,6 +114,67 @@ def require_admin():
 
 def require_local():
     if request.remote_addr not in ("127.0.0.1", "::1"):
+        abort(403)
+
+
+# --- LAN-only access ----------------------------------------------------
+# The server binds 0.0.0.0:8080 because the kiosk itself talks to it via
+# 127.0.0.1 *and* the admin laptop talks to it via the Pi's LAN IP. To stop
+# anything beyond the local network from poking at the API (e.g. if the Pi
+# ever ends up behind a misconfigured port-forward or on a hostile Wi-Fi),
+# every request goes through a CIDR allowlist before any route runs.
+#
+# Defaults to RFC1918 + loopback + IPv6 link-local/ULA. Override with the
+# ASIPAD_ALLOWED_CIDRS env var (comma-separated). Disable for development
+# only with ASIPAD_ALLOW_ALL=1.
+
+DEFAULT_LAN_CIDRS = (
+    "127.0.0.0/8",
+    "::1/128",
+    "10.0.0.0/8",
+    "172.16.0.0/12",
+    "192.168.0.0/16",
+    "fe80::/10",
+    "fc00::/7",
+)
+
+
+def _parse_cidrs(raw: str | None) -> tuple:
+    cidrs = (raw or ",".join(DEFAULT_LAN_CIDRS)).split(",")
+    nets = []
+    for token in cidrs:
+        token = token.strip()
+        if not token:
+            continue
+        try:
+            nets.append(ipaddress.ip_network(token, strict=False))
+        except ValueError:
+            logging.getLogger("asipad").warning("ignoring invalid CIDR %r", token)
+    return tuple(nets)
+
+
+LAN_CIDRS = _parse_cidrs(os.environ.get("ASIPAD_ALLOWED_CIDRS"))
+ALLOW_ALL = os.environ.get("ASIPAD_ALLOW_ALL") == "1"
+
+
+def _is_lan(addr: str | None) -> bool:
+    if not addr:
+        return False
+    try:
+        ip = ipaddress.ip_address(addr)
+    except ValueError:
+        return False
+    for net in LAN_CIDRS:
+        if ip.version == net.version and ip in net:
+            return True
+    return False
+
+
+@app.before_request
+def _enforce_lan_only():
+    if ALLOW_ALL:
+        return
+    if not _is_lan(request.remote_addr):
         abort(403)
 
 

@@ -94,6 +94,22 @@ The admin UI lets you upload / clear the kiosk background image. Shutdown and
 reboot endpoints are accepted only from `127.0.0.1` (i.e. the kiosk itself,
 via the long-press power dot in the top-right corner).
 
+### Network access (LAN-only by default)
+
+The Flask server binds `0.0.0.0:8080` (the kiosk talks to it via loopback,
+the admin laptop via the LAN), so it's important nothing further out can
+reach the API. Every request runs through a CIDR allowlist before any
+route fires; non-LAN clients get `403`. Defaults:
+
+- `127.0.0.0/8`, `::1/128` — loopback
+- `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16` — RFC1918
+- `fe80::/10`, `fc00::/7` — IPv6 link-local + ULA
+
+Override with `ASIPAD_ALLOWED_CIDRS` (comma-separated) in the
+`kiosk-server.service` environment if you run on a different private
+range, or set `ASIPAD_ALLOW_ALL=1` during local development to disable
+the check entirely.
+
 ## Customising tiles, calendar, etc.
 
 - `frontend/index.html` — markup for the home grid + sub-pages.
@@ -110,10 +126,10 @@ ships it; the kiosk auto-reloads.
 
 ```mermaid
 flowchart TB
-    laptop["Laptop<br/>LAN admin browser"]
-    subgraph pi["Pi (asi@asipad)"]
+    laptop["Laptop<br/>Admin Browser"]
+    subgraph pi["Raspberry Pi"]
         direction TB
-        cog["cog<br/>WPE-WebKit kiosk browser"]
+        cog["cog<br/>Kiosk Browser (WPE-WebKit)"]
         cage["cage<br/>Wayland on /dev/tty1"]
         flask["python3 Flask<br/>0.0.0.0:8080"]
         data[("data/<br/>backgrounds, stories,<br/>jobs, events, config")]
@@ -121,10 +137,11 @@ flowchart TB
         cog -- "HTTP 127.0.0.1" --> flask
         flask --> data
     end
-    panel(["Touchscreen panel"])
+    screen(["Touchscreen Display"])
     laptop -- "HTTP /admin" --> flask
-    cage -- HDMI --> panel
-    panel -. touch .-> cage
+    cage -- HDMI --> screen
+    screen -. "Touch Input" .-> cage
+    laptop ~~~ screen
 ```
 
 - `kiosk-server.service` — Flask app, `server/app.py`. Bound on `0.0.0.0:8080`
