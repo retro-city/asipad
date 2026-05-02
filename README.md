@@ -1,6 +1,6 @@
 <h1><img src="assets/asipad.svg" width="350px" alt="ASIPad" /></h1>
 
-Kiosk firmware for a safe and *disconnected* children's tablet that can be used *as is* or configured/expanded with content from the childs personal life. It was designed to be an open source alternative to edutainment products like Lexibook.
+Kiosk firmware for a safe children's tablet. Children have no direct internet access; administrators configure and load content over the local network. Can be used as is or expanded with content from the child's personal life. It was designed to be an open source alternative to edutainment products like Lexibook.
 
 The software have been designed with a soon-to-be five year old in mind and the content reflects elements that has been important in their and other childrens play life. This is reflected in sections like a configurable **CALENDAR**, possibiltiy to role-play **WORK** (free typing), **READ** illustrated short stories, practice how to **WRITE**, and do basic math in **NUMBERS**.
 
@@ -125,23 +125,26 @@ ships it; the kiosk auto-reloads.
 ## Architecture
 
 ```mermaid
-flowchart TB
+flowchart LR
+    screen(["Touchscreen Display"])
     laptop["Laptop<br/>Admin Browser"]
+    
     subgraph pi["Raspberry Pi"]
-        direction TB
         cog["cog<br/>Kiosk Browser (WPE-WebKit)"]
         cage["cage<br/>Wayland on /dev/tty1"]
-        flask["python3 Flask<br/>0.0.0.0:8080"]
+        flask["flask<br/>0.0.0.0:8080"]
         data[("data/<br/>backgrounds, stories,<br/>jobs, events, config")]
         cage --> cog
         cog -- "HTTP 127.0.0.1" --> flask
         flask --> data
     end
-    screen(["Touchscreen Display"])
-    laptop -- "HTTP /admin" --> flask
-    cage -- HDMI --> screen
-    screen -. "Touch Input" .-> cage
-    laptop ~~~ screen
+    subgraph users["User Access"]
+      laptop ~~~ screen
+      laptop -- "HTTP /admin" --> flask
+      cage -- HDMI --> screen
+      screen -. "Touch Input" .-> cage
+    end
+
 ```
 
 - `kiosk-server.service` — Flask app, `server/app.py`. Bound on `0.0.0.0:8080`

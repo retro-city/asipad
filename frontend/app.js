@@ -5,6 +5,7 @@ const PAGES = {
   skrive:            { title: "Skrive",   body: skriveMenuBody },
   "skrive-norsk":    { title: "Norsk",    body: skriveNorskBody,    parent: "skrive" },
   "skrive-ukrainsk": { title: "Ukrainsk", body: skriveUkrainskBody, parent: "skrive" },
+  "skrive-engelsk":  { title: "Engelsk",  body: skriveEngelskBody,  parent: "skrive" },
   tall:          { title: "Tall",          body: tallBody },
   jobb:          { title: "Jobb",          body: jobbBody },
   innstillinger: { title: "Innstillinger", body: settingsBody },
@@ -360,6 +361,80 @@ const SKRIVE_GAMES = {
       { emoji: "🌹", word: "ТРОЯНДА" },
     ],
   },
+  engelsk: {
+    label: "Engelsk",
+    flag:  "🇬🇧",
+    feedback: { correct: "✓ Good job!", wrong: "Try again!" },
+    kbd: [
+      ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+      ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
+      ["⌫", "Z", "X", "C", "V", "B", "N", "M", "⏎"],
+    ],
+    // English mirrors of the Norwegian list (same emoji, English word).
+    words: [
+      { emoji: "🦁", word: "LION" },
+      { emoji: "🐱", word: "CAT" },
+      { emoji: "🐶", word: "DOG" },
+      { emoji: "🐭", word: "MOUSE" },
+      { emoji: "🐝", word: "BEE" },
+      { emoji: "🐠", word: "FISH" },
+      { emoji: "🦊", word: "FOX" },
+      { emoji: "🐮", word: "COW" },
+      { emoji: "🐷", word: "PIG" },
+      { emoji: "🐰", word: "RABBIT" },
+      { emoji: "🐻", word: "BEAR" },
+      { emoji: "🐯", word: "TIGER" },
+      { emoji: "🐺", word: "WOLF" },
+      { emoji: "🦉", word: "OWL" },
+      { emoji: "🐧", word: "PENGUIN" },
+      { emoji: "🐘", word: "ELEPHANT" },
+      { emoji: "🦒", word: "GIRAFFE" },
+      { emoji: "🐢", word: "TURTLE" },
+      { emoji: "🐳", word: "WHALE" },
+      { emoji: "🦭", word: "SEAL" },
+      { emoji: "🦀", word: "CRAB" },
+      { emoji: "🐔", word: "HEN" },
+      { emoji: "🦆", word: "DUCK" },
+      { emoji: "🦅", word: "EAGLE" },
+      { emoji: "🐵", word: "MONKEY" },
+      { emoji: "🐸", word: "FROG" },
+      { emoji: "🪰", word: "FLY" },
+      { emoji: "🤖", word: "ROBOT" },
+      { emoji: "❤️", word: "HEART" },
+      { emoji: "🌳", word: "TREE" },
+      { emoji: "☀️", word: "SUN" },
+      { emoji: "🌙", word: "MOON" },
+      { emoji: "⭐", word: "STAR" },
+      { emoji: "🌈", word: "RAINBOW" },
+      { emoji: "❄️", word: "SNOW" },
+      { emoji: "☁️", word: "CLOUD" },
+      { emoji: "🌹", word: "ROSE" },
+      { emoji: "🚗", word: "CAR" },
+      { emoji: "✈️", word: "PLANE" },
+      { emoji: "🚲", word: "BIKE" },
+      { emoji: "🚂", word: "TRAIN" },
+      { emoji: "🚢", word: "BOAT" },
+      { emoji: "🍎", word: "APPLE" },
+      { emoji: "🍌", word: "BANANA" },
+      { emoji: "🥕", word: "CARROT" },
+      { emoji: "🍅", word: "TOMATO" },
+      { emoji: "🥒", word: "CUCUMBER" },
+      { emoji: "🧅", word: "ONION" },
+      { emoji: "🥚", word: "EGG" },
+      { emoji: "🍞", word: "BREAD" },
+      { emoji: "🍕", word: "PIZZA" },
+      { emoji: "🍰", word: "CAKE" },
+      { emoji: "🍦", word: "ICECREAM" },
+      { emoji: "🥛", word: "MILK" },
+      { emoji: "🍵", word: "TEA" },
+      { emoji: "☕", word: "COFFEE" },
+      { emoji: "⚽", word: "BALL" },
+      { emoji: "🏠", word: "HOUSE" },
+      { emoji: "🚓", word: "POLICE" },
+      { emoji: "👶", word: "BABY" },
+      { emoji: "👁️", word: "EYE" },
+    ],
+  },
 };
 
 let skriveMode  = "norsk";
@@ -378,10 +453,10 @@ function skriveMenuBody() {
       <div class="story-flag">${SKRIVE_GAMES.ukrainsk.flag}</div>
       <div class="story-title">${SKRIVE_GAMES.ukrainsk.label}</div>
     </button>
-    <div class="story-card disabled">
-      <div class="story-flag">?</div>
-      <div class="story-title">Kommer snart</div>
-    </div>
+    <button class="story-card" data-route="skrive-engelsk">
+      <div class="story-flag">${SKRIVE_GAMES.engelsk.flag}</div>
+      <div class="story-title">${SKRIVE_GAMES.engelsk.label}</div>
+    </button>
   </div>`;
 }
 
@@ -394,6 +469,13 @@ function skriveNorskBody() {
 
 function skriveUkrainskBody() {
   skriveMode = "ukrainsk";
+  skrivePrev = null;
+  newSkriveWord();
+  return renderSkrive();
+}
+
+function skriveEngelskBody() {
+  skriveMode = "engelsk";
   skrivePrev = null;
   newSkriveWord();
   return renderSkrive();
