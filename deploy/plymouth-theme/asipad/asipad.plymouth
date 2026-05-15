@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=ASIPad
+Description=Centered white ASIPad logo on black background.
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/asipad
+ScriptFile=/usr/share/plymouth/themes/asipad/asipad.script

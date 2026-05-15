@@ -57,40 +57,36 @@ ul li { margin-bottom: 0.3rem; }
 
 .bg-library .error { color: #c44; }
 
-.bg-card {
-  background: #1c2440;
-  border-radius: 10px;
+/* mdc-card-based bg-card. Original colored-frame cue (orange "current"
+   border) is preserved by tightening MDC's outline width on .current. */
+.bg-card.mdc-card {
+  background: #fff;
   overflow: hidden;
-  border: 3px solid transparent;
-  display: flex;
-  flex-direction: column;
-  transition: transform 80ms ease, border-color 120ms ease;
+  transition: transform 80ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+.bg-card.mdc-card:hover { transform: translateY(-2px); }
+.bg-card.mdc-card.current {
+  border-color: #ffb84d;
+  border-width: 3px;
 }
 
-.bg-card:hover { transform: translateY(-2px); }
-.bg-card.current { border-color: #ffb84d; }
-
-.bg-card .thumb {
+.bg-card .mdc-card__primary-action {
   position: relative;
+  width: 100%;
+  border: none;
   background: #000;
   cursor: pointer;
-  border: none;
   padding: 0;
-  display: block;
-  width: 100%;
 }
-
-.bg-card .thumb img {
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
-  display: block;
+.bg-card .mdc-card__media {
+  background-color: #000;
 }
 
 .bg-card .badge {
   position: absolute;
   top: 0.5rem;
   left: 0.5rem;
+  z-index: 2;
   background: #ffb84d;
   color: #1a1a1a;
   font-size: 0.75rem;
@@ -101,33 +97,40 @@ ul li { margin-bottom: 0.3rem; }
   text-transform: uppercase;
 }
 
-.bg-card .actions {
+.bg-card .mdc-card__actions {
+  padding: 0.4rem 0.6rem;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+
+.bg-card .rental-cost-row {
   display: flex;
-  gap: 0.4rem;
-  padding: 0.5rem;
-}
-
-.bg-card .actions button {
-  flex: 1;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.7rem;
   font-size: 0.85rem;
-  padding: 0.45rem 0.6rem;
-  font-weight: 600;
+  color: #303451;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+.bg-card .rental-cost-row label { font-weight: 600; }
+.bg-card .rental-cost-row input {
+  width: 4.5rem;
+  padding: 0.3rem 0.5rem;
   font-family: inherit;
-  border: none;
+  font-size: 0.9rem;
+  border: 1px solid #ccd;
   border-radius: 6px;
-  cursor: pointer;
-  color: #fff;
+  background: #fff;
 }
-
-.bg-card .actions .use { background: #2c3e7a; }
-.bg-card .actions .use[disabled] { background: #6a7090; cursor: default; }
-.bg-card .actions .delete {
-  background: #c44;
-  flex: 0 0 auto;
-  width: 2.4rem;
-  font-size: 1.1rem;
-  line-height: 1;
+.bg-card .rental-cost-row .rental-cost-hint {
+  font-size: 0.75rem;
+  color: #6a7090;
+  margin-left: auto;
 }
+.bg-card .mdc-icon-button[aria-label="Slett"] {
+  color: #c44;
+  margin-left: auto;
+}
+.bg-card .mdc-icon-button .material-icons { font-size: 22px; }
 
 /* Upload */
 form#upload-form {
@@ -204,13 +207,89 @@ form#upload-form {
   cursor: pointer;
 }
 
-.nivaa-buttons {
+.header-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  margin: 0.4rem 0 0.8rem;
+  font-size: 0.95rem;
+  color: #303451;
+}
+.header-toggles label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+/* --- Material Components scaffolding --- */
+.md-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.6rem;
+}
+.md-grow { flex: 1; }
+.md-row .mdc-button { align-self: center; }
+
+.md-switch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin: 0.6rem 0 1rem;
+}
+.md-switch-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.95rem;
+  color: #303451;
+  cursor: pointer;
+}
+
+/* Level / gender chips inherit MDC ripple but keep their semantic colors. */
+.mdc-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+.mdc-button-row .level-btn,
+.mdc-button-row .gender-btn {
+  --mdc-theme-primary: transparent;
+  border-radius: 8px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 3px solid transparent;
+  padding: 0.7rem 1rem;
+  min-width: 80px;
+}
+.mdc-button-row .level-btn.active,
+.mdc-button-row .gender-btn.active {
+  border-color: #1c2440;
+}
+
+/* Native select restyled to look at home next to MDC components. */
+.md-select {
+  font-family: inherit;
+  font-size: 1rem;
+  background: #fff;
+  color: #1c2440;
+  border: 1px solid #ccd;
+  border-radius: 6px;
+  padding: 0.55rem 0.8rem;
+  margin-bottom: 0.6rem;
+  width: 100%;
+  max-width: 320px;
+}
+
+.level-buttons {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
 }
 
-.nivaa-btn {
+.level-btn {
   flex: 1;
   padding: 0.7rem 1rem;
   border-radius: 8px;
@@ -224,10 +303,21 @@ form#upload-form {
   transition: border-color 120ms ease;
 }
 
-.nivaa-btn.lett      { background: #4caf50; color: #fff; }
-.nivaa-btn.medium    { background: #ffb84d; color: #1a1a1a; }
-.nivaa-btn.vanskelig { background: #cc4444; color: #fff; }
-.nivaa-btn.active    { border-color: #1c2440; }
+.level-btn.easy   { background: #4caf50; color: #fff; }
+.level-btn.medium { background: #ffb84d; color: #1a1a1a; }
+.level-btn.hard   { background: #cc4444; color: #fff; }
+.level-btn.active { border-color: #1c2440; }
+
+.lang-select {
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  border: 2px solid #ccd;
+  font-family: inherit;
+  font-size: 1rem;
+  background: #fff;
+  cursor: pointer;
+  margin-bottom: 0.6rem;
+}
 
 .gender-buttons {
   display: flex;
@@ -477,7 +567,8 @@ form#upload-form {
   flex: 0 0 auto;
 }
 
-.editor-page .img-thumb img {
+.editor-page .img-thumb img,
+.editor-page .img-thumb video {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -514,3 +605,87 @@ form#upload-form {
 #editor-add-page { background: #6a7090; }
 #editor-save     { background: #2c7a3a; margin-left: auto; }
 #editor-cancel   { background: #aa3030; }
+
+/* Lock pattern (3-colour password) */
+.lock-current {
+  margin: 0 0 0.75rem 0;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  color: #6a7090;
+  font-size: 0.95rem;
+}
+
+.lock-current .lock-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  display: inline-block;
+}
+
+.lock-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.lock-row {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.lock-row .lock-row-label {
+  width: 1.2rem;
+  font-weight: 700;
+  color: #6a7090;
+}
+
+.lock-row .lock-color {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  transition: transform 100ms ease, border-color 100ms ease;
+}
+
+.lock-row .lock-color.picked {
+  border: 3px solid #1c2440;
+  transform: scale(1.15);
+}
+
+.color-red    { background: #e53935; }
+.color-orange { background: #fb8c00; }
+.color-yellow { background: #fdd835; }
+.color-green  { background: #43a047; }
+.color-blue   { background: #1e88e5; }
+.color-indigo { background: #3949ab; }
+.color-violet { background: #8e24aa; }
+
+.lock-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.lock-actions button {
+  padding: 0.55rem 1rem;
+  border-radius: 6px;
+  border: none;
+  background: #2c7a3a;
+  color: #fff;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+.lock-actions button.danger { background: #c44; }
+.lock-actions button:disabled { opacity: 0.5; cursor: default; }
+
+#lock-status { margin-top: 0.5rem; min-height: 1.4em; font-weight: 500; }
+#lock-status.ok  { color: #2c7a3a; }
+#lock-status.err { color: #c44; }

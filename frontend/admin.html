@@ -3,116 +3,306 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Asipad admin</title>
+  <title data-i18n="admin.title">ASIPad Administration</title>
+  <link rel="stylesheet" href="vendor/material-components.css">
+  <link rel="stylesheet" href="vendor/material-icons.css">
   <link rel="stylesheet" href="admin.css">
 </head>
 <body>
   <main>
-    <h1>Asipad admin</h1>
+    <h1 data-i18n="admin.title">ASIPad Administration</h1>
 
     <section>
-      <h2>Apparattilpasning</h2>
-      <p class="hint">Endringer vises på iPaden i løpet av et minutt (eller umiddelbart om noen åpner siden).</p>
+      <h2 data-i18n="admin.section.device">Apparattilpasning</h2>
+      <p class="hint" data-i18n="admin.hint.changes">Endringer vises på iPaden i løpet av et minutt (eller umiddelbart om noen åpner siden).</p>
 
-      <h3>Overskrift</h3>
-      <form id="heading-form" class="heading-form">
-        <input id="heading-input" type="text" maxlength="80" placeholder="ASIPad">
-        <button type="submit">Lagre</button>
+      <h3 data-i18n="admin.heading_label">Overskrift</h3>
+      <form id="heading-form" class="heading-form md-row">
+        <label class="mdc-text-field mdc-text-field--filled md-grow">
+          <span class="mdc-text-field__ripple"></span>
+          <input class="mdc-text-field__input" id="heading-input" type="text" maxlength="80" aria-label="Heading">
+          <span class="mdc-floating-label" data-i18n="admin.heading_label">Overskrift</span>
+          <span class="mdc-line-ripple"></span>
+        </label>
+        <button type="submit" class="mdc-button mdc-button--raised">
+          <span class="mdc-button__ripple"></span>
+          <span class="mdc-button__label" data-i18n="common.save">Lagre</span>
+        </button>
       </form>
 
-      <h3>Vanskelighetsgrad</h3>
-      <div id="nivaa-buttons" class="nivaa-buttons"></div>
+      <div class="md-switch-row">
+        <label class="md-switch-label">
+          <button id="show-logo-toggle" class="mdc-switch mdc-switch--unselected" type="button" role="switch" aria-checked="false">
+            <div class="mdc-switch__track"></div>
+            <div class="mdc-switch__handle-track">
+              <div class="mdc-switch__handle">
+                <div class="mdc-switch__shadow"><div class="mdc-elevation-overlay"></div></div>
+                <div class="mdc-switch__ripple"></div>
+                <div class="mdc-switch__icons">
+                  <svg class="mdc-switch__icon mdc-switch__icon--on" viewBox="0 0 24 24"><path d="M19.69,5.23L8.96,15.96l-4.23-4.23L2.96,13.5l6,6L21.46,7L19.69,5.23z" /></svg>
+                  <svg class="mdc-switch__icon mdc-switch__icon--off" viewBox="0 0 24 24"><path d="M20 13H4v-2h16v2z" /></svg>
+                </div>
+              </div>
+            </div>
+          </button>
+          <span data-i18n="admin.show_logo">Vis logo</span>
+        </label>
+        <label class="md-switch-label">
+          <button id="show-heading-toggle" class="mdc-switch mdc-switch--unselected" type="button" role="switch" aria-checked="false">
+            <div class="mdc-switch__track"></div>
+            <div class="mdc-switch__handle-track">
+              <div class="mdc-switch__handle">
+                <div class="mdc-switch__shadow"><div class="mdc-elevation-overlay"></div></div>
+                <div class="mdc-switch__ripple"></div>
+                <div class="mdc-switch__icons">
+                  <svg class="mdc-switch__icon mdc-switch__icon--on" viewBox="0 0 24 24"><path d="M19.69,5.23L8.96,15.96l-4.23-4.23L2.96,13.5l6,6L21.46,7L19.69,5.23z" /></svg>
+                  <svg class="mdc-switch__icon mdc-switch__icon--off" viewBox="0 0 24 24"><path d="M20 13H4v-2h16v2z" /></svg>
+                </div>
+              </div>
+            </div>
+          </button>
+          <span data-i18n="admin.show_heading">Vis tittel</span>
+        </label>
+      </div>
 
-      <h3>Kjønn</h3>
-      <div id="gender-buttons" class="gender-buttons"></div>
+      <h3 data-i18n="admin.level_label">Vanskelighetsgrad</h3>
+      <div id="level-buttons" class="level-buttons mdc-button-row"></div>
+
+      <h3 data-i18n="admin.gender_label">Kjønn (grammatisk)</h3>
+      <div id="gender-buttons" class="gender-buttons mdc-button-row"></div>
+
+      <h3 data-i18n="admin.lang.admin_label">Språk for admin-grensesnittet</h3>
+      <select id="admin-lang-select" class="lang-select md-select"></select>
+
+      <h3 data-i18n="admin.lang.kiosk_label">Språk for nettbrettet</h3>
+      <select id="kiosk-lang-select" class="lang-select md-select"></select>
 
       <p id="config-status" role="status" aria-live="polite"></p>
     </section>
 
     <section>
-      <h2>Bakgrunnsbilder</h2>
-      <p class="hint">Trykk på et bilde for å sette det som aktiv bakgrunn. Trykk × for å slette.</p>
+      <h2 data-i18n="admin.section.lock">Lås (3 farger)</h2>
+      <p class="hint" data-i18n="admin.lock.hint">Velg 3 farger som passord. La være tom for ingen lås.</p>
+
+      <p id="lock-current" class="lock-current"></p>
+      <div id="lock-rows" class="lock-rows"></div>
+      <div class="lock-actions">
+        <button id="lock-save" type="button" data-i18n="common.save">Lagre</button>
+        <button id="lock-clear" type="button" class="danger" data-i18n="admin.lock.clear">Fjern lås</button>
+      </div>
+      <p id="lock-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section>
+      <h2 data-i18n="admin.section.time">Aktivitetstid</h2>
+      <p class="hint" data-i18n="admin.time.hint">Tiden teller bare ned mens barnet er inne i en aktivitet (LESE, SKRIVE, PLUSS osv.) — ikke i menyene. Når tiden går ut må fargekoden punches inn for å legge til mer tid. Sett budsjett til 0 for å slå av timeren.</p>
+
+      <h3 data-i18n="admin.time.budget_label">Budsjett (minutter)</h3>
+      <form id="time-budget-form" class="heading-form">
+        <input id="time-budget-input" type="number" min="0" max="720" step="1">
+        <button type="submit" data-i18n="common.save">Lagre</button>
+      </form>
+
+      <h3 data-i18n="admin.time.options_label">Tilleggsvalg (minutter)</h3>
+      <form id="time-options-form" class="heading-form">
+        <input id="time-opt-1" type="number" min="1" max="120" step="1">
+        <input id="time-opt-2" type="number" min="1" max="120" step="1">
+        <input id="time-opt-3" type="number" min="1" max="120" step="1">
+        <button type="submit" data-i18n="common.save">Lagre</button>
+      </form>
+
+      <h3 data-i18n="admin.time.pattern_label">Fargekode (6 farger)</h3>
+      <p id="time-pattern-current" class="lock-current"></p>
+      <div id="time-pattern-rows" class="lock-rows"></div>
+      <div class="lock-actions">
+        <button id="time-pattern-save" type="button" data-i18n="common.save">Lagre</button>
+        <button id="time-pattern-reset" type="button" data-i18n="admin.time.pattern_reset">Standard</button>
+      </div>
+      <p id="time-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section>
+      <h2 data-i18n="admin.section.backgrounds">Bakgrunnsbilder</h2>
+      <p class="hint" data-i18n="admin.bg_hint">Trykk på et bilde for å sette det som aktiv bakgrunn. Trykk × for å slette.</p>
 
       <div class="bg-library" id="bg-library">
-        <p class="empty">Laster…</p>
+        <p class="empty" data-i18n="common.loading">Laster…</p>
       </div>
 
-      <h3>Last opp nytt bilde</h3>
+      <h3 data-i18n="admin.upload_label">Last opp nytt bilde</h3>
       <form id="upload-form">
         <label class="file-input">
           <input type="file" id="file" name="file" accept="image/*" required>
-          <span id="file-label">Velg bilde…</span>
+          <span id="file-label" data-i18n="admin.choose_image">Velg bilde…</span>
         </label>
-        <button type="submit">Last opp</button>
+        <button type="submit" data-i18n="admin.upload_button">Last opp</button>
       </form>
 
       <p id="status" role="status" aria-live="polite"></p>
     </section>
 
     <section>
-      <h2>Kalender</h2>
-      <p class="hint">Last opp en .ics-fil for å legge til avtaler. Like avtaler (samme UID + dato) hoppes over.</p>
+      <h2 data-i18n="admin.section.pictures">Bilder</h2>
+      <p class="hint" data-i18n="admin.pictures.hint">Bildene vises i FRITID → BILDER på iPaden. Trykk × for å slette.</p>
 
-      <p id="calendar-info" class="calendar-info">Laster…</p>
+      <div class="bg-library" id="pictures-library">
+        <p class="empty" data-i18n="common.loading">Laster…</p>
+      </div>
+
+      <h3 data-i18n="admin.pictures.upload_label">Last opp nytt bilde</h3>
+      <form id="picture-upload-form">
+        <label class="file-input">
+          <input type="file" id="picture-file" name="file" accept="image/*" required>
+          <span id="picture-file-label" data-i18n="admin.choose_image">Velg bilde…</span>
+        </label>
+        <button type="submit" data-i18n="admin.upload_button">Last opp</button>
+      </form>
+
+      <p id="picture-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section>
+      <h2 data-i18n="admin.section.gifs">GIF-er (FRITID)</h2>
+      <p class="hint" data-i18n="admin.gifs.hint">GIF-er vises i FRITID → ANIMASJONER på iPaden. Konverter MP4-er til GIF på en kraftigere maskin før opplasting (se README). Maks 25 MB per fil.</p>
+
+      <div class="bg-library" id="gifs-library">
+        <p class="empty" data-i18n="common.loading">Laster…</p>
+      </div>
+
+      <h3 data-i18n="admin.gifs.upload_label">Last opp ny GIF</h3>
+      <form id="gif-upload-form">
+        <label class="file-input">
+          <input type="file" id="gif-file" name="file" accept="image/gif,image/webp" required>
+          <span id="gif-file-label" data-i18n="admin.choose_gif">Velg GIF…</span>
+        </label>
+        <button type="submit" data-i18n="admin.upload_button">Last opp</button>
+      </form>
+
+      <p id="gif-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <!-- VIDEO section hidden: playback isn't viable on Pi Zero 2 W. The
+         elements stay in the DOM so admin.js's video handlers don't crash
+         on null references; just remove the inline display:none to bring
+         the section back when hardware allows. -->
+    <section style="display:none">
+      <h2 data-i18n="admin.section.videos">Videoer (FRITID)</h2>
+      <p class="hint" data-i18n="admin.videos.hint">Videoene vises i FRITID → VIDEO på iPaden. Trykk × for å slette. Maks ~200 MB per fil.</p>
+
+      <div class="bg-library" id="videos-library">
+        <p class="empty" data-i18n="common.loading">Laster…</p>
+      </div>
+
+      <h3 data-i18n="admin.videos.upload_label">Last opp ny video</h3>
+      <form id="video-upload-form">
+        <label class="file-input">
+          <input type="file" id="video-file" name="file" accept="video/mp4,video/webm,video/quicktime" required>
+          <span id="video-file-label" data-i18n="admin.choose_video">Velg video…</span>
+        </label>
+        <button type="submit" data-i18n="admin.upload_button">Last opp</button>
+      </form>
+
+      <p id="video-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section>
+      <h2 data-i18n="admin.section.trainings">Trening (FRITID)</h2>
+      <p class="hint" data-i18n="admin.trainings.hint">Treningsøkter vises i FRITID → TRENING på iPaden. Hver økt kan ha flere sider med bilde, gif eller video og en tekst.</p>
+
+      <h3 data-i18n="admin.trainings.active_label">Aktive treningsøkter (inntil 3)</h3>
+      <div id="active-training-slots" class="active-slots">
+        <select data-training-slot="0"></select>
+        <select data-training-slot="1"></select>
+        <select data-training-slot="2"></select>
+      </div>
+      <button id="save-active-trainings" data-i18n="admin.stories.save_active">Lagre aktive</button>
+
+      <h3 data-i18n="admin.trainings.all_label">Alle treningsøkter</h3>
+      <div id="training-list" class="story-list-admin">
+        <p class="empty" data-i18n="common.loading">Laster…</p>
+      </div>
+      <button id="new-training" data-i18n="admin.trainings.new">+ Ny økt</button>
+
+      <p id="training-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <dialog id="training-editor">
+      <h2 id="training-editor-heading" data-i18n="admin.trainings.edit_title">Rediger treningsøkt</h2>
+      <input id="training-editor-title-input" placeholder="Tittel" data-i18n-placeholder="work.title_placeholder">
+      <div id="training-editor-pages" class="editor-pages"></div>
+      <div class="editor-actions">
+        <button id="training-editor-add-page" data-i18n="admin.trainings.add_page">+ Side</button>
+        <button id="training-editor-save" data-i18n="common.save">Lagre</button>
+        <button id="training-editor-cancel" data-i18n="common.cancel">Avbryt</button>
+      </div>
+    </dialog>
+
+    <section>
+      <h2 data-i18n="admin.section.calendar">Kalender</h2>
+      <p class="hint" data-i18n="admin.calendar.import_hint">Last opp en .ics-fil for å legge til avtaler. Like avtaler (samme UID + dato) hoppes over.</p>
+
+      <p id="calendar-info" class="calendar-info" data-i18n="common.loading">Laster…</p>
 
       <form id="calendar-import" class="heading-form">
         <label class="file-input">
           <input type="file" id="calendar-file" name="file" accept=".ics,text/calendar" required>
-          <span id="calendar-file-label">Velg .ics-fil…</span>
+          <span id="calendar-file-label" data-i18n="admin.calendar.choose_ics">Velg .ics-fil…</span>
         </label>
-        <button type="submit">Importer</button>
+        <button type="submit" data-i18n="admin.calendar.import">Importer</button>
       </form>
 
       <div class="calendar-actions">
-        <a id="calendar-export" href="/api/calendar/export" download="asipad.ics">Eksporter .ics</a>
-        <button id="calendar-clear" type="button" class="danger">Tøm kalender</button>
+        <a id="calendar-export" href="/api/calendar/export" download="asipad.ics" data-i18n="admin.calendar.export">Eksporter .ics</a>
+        <button id="calendar-clear" type="button" class="danger" data-i18n="admin.calendar.clear">Tøm kalender</button>
       </div>
 
       <p id="calendar-status" role="status" aria-live="polite"></p>
     </section>
 
     <section>
-      <h2>Historier</h2>
-      <p class="hint">Aktive historier vises på iPaden under LESE. Du kan lagre flere og bytte når du vil.</p>
+      <h2 data-i18n="admin.section.stories">Historier</h2>
+      <p class="hint" data-i18n="admin.stories_hint">Aktive historier vises på iPaden under LESE. Du kan lagre flere og bytte når du vil.</p>
 
-      <h3>Aktive historier (inntil 3)</h3>
+      <h3 data-i18n="admin.stories.active_label">Aktive historier (inntil 3)</h3>
       <div id="active-slots" class="active-slots">
         <select data-slot="0"></select>
         <select data-slot="1"></select>
         <select data-slot="2"></select>
       </div>
-      <button id="save-active">Lagre aktive</button>
+      <button id="save-active" data-i18n="admin.stories.save_active">Lagre aktive</button>
 
-      <h3>Alle historier</h3>
+      <h3 data-i18n="admin.stories.all_label">Alle historier</h3>
       <div id="story-list" class="story-list-admin">
-        <p class="empty">Laster…</p>
+        <p class="empty" data-i18n="common.loading">Laster…</p>
       </div>
-      <button id="new-story">+ Ny historie</button>
+      <button id="new-story" data-i18n="admin.stories.new">+ Ny historie</button>
 
       <p id="story-status" role="status" aria-live="polite"></p>
     </section>
 
     <dialog id="story-editor">
-      <h2 id="editor-heading">Rediger historie</h2>
-      <input id="editor-title-input" placeholder="Tittel">
+      <h2 id="editor-heading" data-i18n="admin.stories.edit_title">Rediger historie</h2>
+      <input id="editor-title-input" placeholder="Tittel" data-i18n-placeholder="work.title_placeholder">
       <div id="editor-pages" class="editor-pages"></div>
       <div class="editor-actions">
-        <button id="editor-add-page">+ Side</button>
-        <button id="editor-save">Lagre</button>
-        <button id="editor-cancel">Avbryt</button>
+        <button id="editor-add-page" data-i18n="admin.stories.add_page">+ Side</button>
+        <button id="editor-save" data-i18n="common.save">Lagre</button>
+        <button id="editor-cancel" data-i18n="common.cancel">Avbryt</button>
       </div>
     </dialog>
 
     <section>
-      <h2>Hjelp</h2>
+      <h2 data-i18n="admin.section.help">Hjelp</h2>
       <ul>
-        <li>Tillatte filtyper: JPG, PNG, WEBP, GIF. Maks 16 MB per fil.</li>
-        <li>Bilder skaleres automatisk til 1280×720 og lagres som WebP.</li>
-        <li>Aktiv bakgrunn vises på iPaden innen noen sekunder.</li>
-        <li>Den aktive bakgrunnen er markert med oransje ramme.</li>
+        <li data-i18n="admin.help.types">Tillatte filtyper: JPG, PNG, WEBP, GIF. Maks 16 MB per fil.</li>
+        <li data-i18n="admin.help.scaling">Bilder skaleres automatisk til 1280×720 og lagres som WebP.</li>
+        <li data-i18n="admin.help.live">Aktiv bakgrunn vises på iPaden innen noen sekunder.</li>
+        <li data-i18n="admin.help.marker">Den aktive bakgrunnen er markert med oransje ramme.</li>
       </ul>
     </section>
   </main>
+  <script src="vendor/material-components.js"></script>
+  <script src="i18n.js"></script>
   <script src="admin.js"></script>
 </body>
 </html>

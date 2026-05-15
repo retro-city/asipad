@@ -15,7 +15,21 @@ html, body {
   height: 100%;
   background: var(--bg-color) center/cover no-repeat;
   color: var(--fg);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", system-ui, sans-serif,
+               "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", "Twemoji Mozilla", emoji;
+}
+
+/* Force the color emoji font as the FIRST choice for any element that
+   exists primarily to show an emoji glyph. The body's font stack puts
+   text fonts first because text fonts often ship monochrome emoji
+   glyphs that win for these specific codepoints; scoping the priority
+   here flips it so 🐱 and ❤️ render in color. */
+.skrive-image,
+.story-flag,
+.tile-icon-emoji {
+  font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji",
+               "Twemoji Mozilla", emoji,
+               -apple-system, system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
   -webkit-user-select: none;
   user-select: none;
@@ -64,6 +78,13 @@ header h1 {
   text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
 }
 
+.header-logo {
+  height: 4.6vw;
+  width: auto;
+  display: block;
+  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.5));
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -96,6 +117,336 @@ header h1 {
 .tile:active {
   transform: scale(0.97);
   background: var(--tile-hot);
+}
+
+.tile.placeholder {
+  opacity: 0.45;
+  cursor: default;
+  box-shadow: none;
+  background: var(--tile);
+}
+.tile.placeholder:active { transform: none; background: var(--tile); }
+.story-card.disabled {
+  opacity: 0.45;
+  cursor: default;
+  box-shadow: none;
+}
+.story-card.disabled:active { transform: none; }
+
+/* VIDEO tile (gallery reuses .bg-pager/.bg-grid; tile shows poster + play) */
+.video-tile {
+  position: relative;
+  background: #000;
+}
+.video-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+.video-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 5vw;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 0 2vw rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+
+/* Activity timer chip (top-right; only visible on activity pages) -- */
+#activity-timer {
+  position: fixed;
+  top: 1.8vh;
+  right: 18vw; /* leave room for power-trigger + (when shown) lock-trigger */
+  z-index: 900;
+  padding: 0.6vh 1.4vw;
+  border-radius: 1.6vw;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--accent);
+  font-size: 2.6vw;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+  transition: background 200ms ease, color 200ms ease;
+}
+#activity-timer.low {
+  color: #fff;
+  background: rgba(204, 68, 68, 0.85);
+  animation: timer-pulse 1.4s ease-in-out infinite;
+}
+@keyframes timer-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.04); }
+}
+
+/* Time-up overlay: 6-slot variant, with two phases ----------------- */
+.time-up-overlay .lock-slots { gap: 1.6vw; }
+.time-up-overlay .time-options {
+  display: flex;
+  flex-direction: column;
+  gap: 2vh;
+  margin-top: 3vh;
+}
+.time-up-overlay .time-option {
+  font-family: inherit;
+  font-size: 4vw;
+  font-weight: 800;
+  padding: 2vh 6vw;
+  border-radius: 2vw;
+  border: none;
+  background: var(--accent);
+  color: #1a1a1a;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.time-up-overlay .time-option:active { transform: scale(0.96); }
+
+/* VALG → Lås (kiosk-side passcode editor) -------------------------- */
+.lock-setting {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2vh;
+}
+.lock-setting .lock-current-row {
+  display: flex;
+  align-items: center;
+  gap: 1.2vw;
+  font-size: 2vw;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+  margin-bottom: 4vh;
+}
+.lock-setting .lock-current-display {
+  display: inline-flex;
+  gap: 0.5vw;
+  align-items: center;
+}
+.lock-setting .lock-mini {
+  width: 2.4vw;
+  height: 2.4vw;
+  border-radius: 50%;
+  border: 0.2vw solid rgba(255,255,255,0.6);
+}
+.lock-setting .lock-none { opacity: 0.5; font-style: italic; }
+
+.lock-setting .lock-edit-slots {
+  display: flex;
+  gap: 2vw;
+}
+.lock-setting .lock-edit-slot {
+  width: 5.4vw;
+  height: 5.4vw;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  border: 0.3vw dashed rgba(255,255,255,0.35);
+  transition: background 120ms, border-color 120ms;
+}
+.lock-setting .lock-edit-slot.filled {
+  border-style: solid;
+  border-color: rgba(255,255,255,0.85);
+  box-shadow: 0 0 2vw rgba(255,255,255,0.25);
+}
+
+.lock-setting .lock-edit-palette {
+  display: flex;
+  gap: 1.5vw;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.lock-setting .lock-edit-color {
+  width: 4.8vw;
+  height: 4.8vw;
+  border-radius: 50%;
+  border: 0.3vw solid rgba(255,255,255,0.4);
+  cursor: pointer;
+  padding: 0;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+  transition: transform 80ms;
+}
+.lock-setting .lock-edit-color:active { transform: scale(0.93); }
+
+.lock-setting .lock-edit-buttons {
+  display: flex;
+  gap: 1.2vw;
+  align-items: center;
+}
+.lock-setting .lock-edit-btn {
+  font-family: inherit;
+  font-size: 2.4vw;
+  padding: 1.2vh 2.5vw;
+  border-radius: 1.5vw;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.lock-setting .lock-edit-btn.save { background: var(--accent); color: #1a1a1a; }
+.lock-setting .lock-edit-btn.save[disabled] { opacity: 0.45; cursor: default; }
+.lock-setting .lock-edit-btn.back  { background: rgba(255,255,255,0.18); color: var(--fg); }
+.lock-setting .lock-edit-btn.clear { background: var(--danger); color: #fff; }
+
+/* BANK — coin balance view + earned-coin popup ---------------------- */
+.bank-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2vh;
+  width: 100%;
+  height: 100%;
+}
+.bank-view .bank-line {
+  font-size: 11.2vw;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: 0.01em;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: 2vw;
+}
+.bank-view .bank-coin {
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.5));
+}
+.bank-view .bank-label {
+  font-size: 3vw;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+  font-weight: 600;
+}
+
+/* GIF rental price + unlocked badges (FRITID → LEI FILM) ----------- */
+.bg-tile.rental-locked > img { opacity: 0.55; filter: grayscale(0.4); }
+.rental-price {
+  position: absolute;
+  top: 0.6vw;
+  right: 0.6vw;
+  background: rgba(255, 184, 77, 0.95);
+  color: #1a1a1a;
+  padding: 0.4vw 1vw;
+  border-radius: 3vw;
+  font-weight: 800;
+  font-size: 2.2vw;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+.rental-unlocked {
+  position: absolute;
+  top: 0.6vw;
+  right: 0.6vw;
+  width: 3.4vw;
+  height: 3.4vw;
+  border-radius: 50%;
+  background: rgba(76, 175, 80, 0.95);
+  color: #fff;
+  font-weight: 900;
+  font-size: 2.2vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+.bg-tile { position: relative; }
+
+/* +1 🪙 popup — fires on every successful task in SKOLE. ------------- */
+.coin-popup {
+  position: fixed;
+  top: 30%;
+  left: 50%;
+  font-size: 8vw;
+  font-weight: 800;
+  color: var(--accent);
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.55), 0 0 2vw rgba(255, 184, 77, 0.35);
+  pointer-events: none;
+  z-index: 1100;
+  white-space: nowrap;
+  animation: coin-pop 1.8s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+.coin-popup.coin-popup-spent {
+  color: #ff8a4d;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), 0 0 2vw rgba(255, 138, 77, 0.35);
+}
+.coin-popup.coin-popup-deny {
+  color: var(--danger);
+  font-size: 5vw;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.55), 0 0 2vw rgba(204, 68, 68, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+@keyframes coin-pop {
+  0%   { opacity: 0; transform: translate(-50%, 0%) scale(0.5); }
+  18%  { opacity: 1; transform: translate(-50%, -10%) scale(1.25); }
+  35%  { opacity: 1; transform: translate(-50%, -25%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -90%) scale(0.92); }
+}
+
+/* BILDER — fullscreen overlay (gallery reuses .bg-pager / .bg-grid / .bg-tile) */
+.bilder-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  cursor: pointer;
+}
+.bilder-full {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+.bilder-close {
+  position: absolute;
+  top: 2vh;
+  right: 2vw;
+  width: 8vw;
+  height: 8vw;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  color: var(--fg);
+  border: none;
+  font-size: 5vw;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bilder-overlay .rental-timer {
+  position: absolute;
+  top: 2vh;
+  left: 2vw;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--accent);
+  padding: 0.8vh 1.6vw;
+  border-radius: 1.5vw;
+  font-size: 3.4vw;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  pointer-events: none;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
 }
 
 .tile-icon {
@@ -651,7 +1002,7 @@ body.osk-open .view { padding-bottom: 34vh; }
 }
 
 .story-card .story-flag {
-  font-size: 9vw;
+  font-size: 7.5vw;
   line-height: 1;
 }
 
@@ -717,7 +1068,8 @@ body.osk-open .view { padding-bottom: 34vh; }
   justify-content: center;
 }
 
-.story-image img {
+.story-image img,
+.story-image .story-media {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -969,56 +1321,6 @@ body.osk-open .view { padding-bottom: 34vh; }
 .skrive-kbd .osk-key.osk-enter { background: rgba(255, 184, 77, 0.18); flex: 1.4; }
 .skrive-kbd .osk-key.osk-space { flex: 9; }
 
-/* NIVÅ — three difficulty cards */
-.nivaa-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2vw;
-  width: 100%;
-  height: 100%;
-}
-
-.nivaa-card {
-  background: var(--tile);
-  border: 0.4vw solid transparent;
-  border-radius: 2vw;
-  color: var(--fg);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.5vh;
-  padding: 2vw;
-  cursor: pointer;
-  font: inherit;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  transition: transform 80ms ease, border-color 120ms ease;
-}
-
-.nivaa-card:active { transform: scale(0.97); }
-.nivaa-card.active { border-color: var(--accent); background: var(--tile-hot); }
-
-.nivaa-dot {
-  width: 5vw;
-  height: 5vw;
-  border-radius: 50%;
-  box-shadow: 0 0 2.5vw rgba(0, 0, 0, 0.35) inset, 0 4px 14px rgba(0, 0, 0, 0.4);
-}
-
-.nivaa-name {
-  font-size: 3.4vw;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-}
-
-.nivaa-desc {
-  font-size: 1.6vw;
-  opacity: 0.7;
-  font-weight: 500;
-  text-align: center;
-}
-
 .calendar-big .weekday { font-size: 4.5vw; font-weight: 600; opacity: 0.85; }
 .calendar-big .day { font-size: 18vw; font-weight: 800; line-height: 1; margin: 0.5vh 0; color: var(--accent); }
 .calendar-big .month { font-size: 4vw; }
@@ -1052,6 +1354,153 @@ body.osk-open .view { padding-bottom: 34vh; }
   transform: scale(2.4);
   transition: transform 1500ms linear;
 }
+
+/* Padlock button — same hit-area as #power-trigger but offset to its left.
+   Hidden via the [hidden] attribute when no lock_pattern is configured. */
+#lock-trigger {
+  position: fixed;
+  top: 0;
+  right: 10vw;
+  width: 10vw;
+  height: 10vw;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 2;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+#lock-trigger[hidden] { display: none; }
+
+#lock-trigger svg {
+  width: 4vw;
+  height: 4vw;
+  transition: color 200ms ease, transform 80ms ease;
+}
+
+#lock-trigger:active svg { transform: scale(0.92); color: var(--accent); }
+
+/* Full-screen lock overlay. Solid background blocks all interaction with
+   the kiosk underneath. Three slot circles + 7 rainbow buttons + small
+   backspace. Persistence is handled in app.js via sessionStorage. */
+.lock-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: #0b0e18;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4vh;
+  padding: 4vw;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.lock-overlay .lock-icon {
+  width: 16vw;
+  height: 16vw;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.lock-overlay .lock-title {
+  font-size: 5vw;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff;
+  margin: 0;
+}
+
+.lock-overlay .lock-instruction {
+  font-size: 2.6vw;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0;
+  text-align: center;
+}
+
+.lock-overlay .lock-feedback {
+  font-size: 3vw;
+  color: var(--danger);
+  font-weight: 700;
+  height: 1.4em;
+  text-align: center;
+  margin: 0;
+}
+
+.lock-overlay .lock-slots {
+  display: flex;
+  gap: 5vw;
+  align-items: center;
+}
+
+.lock-overlay .lock-slot {
+  width: 7.2vw;
+  height: 7.2vw;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 0.4vw solid rgba(255, 255, 255, 0.25);
+  transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+
+.lock-overlay .lock-slot.filled { border-color: rgba(255, 255, 255, 0.85); }
+.lock-overlay.shake .lock-slot { animation: lock-shake 360ms ease; }
+
+@keyframes lock-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-1.5vw); }
+  40%      { transform: translateX(1.5vw); }
+  60%      { transform: translateX(-1vw); }
+  80%      { transform: translateX(1vw); }
+}
+
+.lock-overlay .lock-backspace {
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  color: #fff;
+  width: 7.2vw;
+  height: 7.2vw;
+  border-radius: 50%;
+  font-size: 3vw;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lock-overlay .lock-backspace:active { transform: scale(0.92); background: rgba(255, 255, 255, 0.22); }
+
+.lock-overlay .lock-palette {
+  display: flex;
+  gap: 3vw;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.lock-overlay .lock-color {
+  width: 6.6vw;
+  height: 6.6vw;
+  border-radius: 50%;
+  border: 0.3vw solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  transition: transform 80ms ease, border-color 120ms ease;
+}
+.lock-overlay .lock-color:active { transform: scale(0.9); border-color: rgba(255, 255, 255, 0.95); }
+
+.lock-color.color-red    { background: #e53935; }
+.lock-color.color-orange { background: #fb8c00; }
+.lock-color.color-yellow { background: #fdd835; }
+.lock-color.color-green  { background: #43a047; }
+.lock-color.color-blue   { background: #1e88e5; }
+.lock-color.color-indigo { background: #3949ab; }
+.lock-color.color-violet { background: #8e24aa; }
 
 dialog#power-menu {
   border: none;
@@ -1095,3 +1544,102 @@ dialog .actions button[data-action="cancel"] {
   font-weight: 600;
 }
 dialog .actions button:disabled { opacity: 0.6; cursor: default; }
+
+/* Stor og liten — capital/lowercase letter pairing game */
+.sl-board {
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 1.5vw;
+  padding: 2vw;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5vh;
+  align-items: stretch;
+  box-sizing: border-box;
+}
+
+.sl-cols {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: stretch;
+  min-height: 0;
+  padding: 0 2vw;
+}
+
+.sl-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  z-index: 2;
+  gap: 1vh;
+}
+
+.sl-cell {
+  width: min(10vw, 12vh);
+  height: min(10vw, 12vh);
+  background: var(--tile);
+  color: var(--fg);
+  border: 0.5vh solid transparent;
+  border-radius: min(2vw, 2.4vh);
+  font-size: min(6vw, 7.5vh);
+  line-height: 1;
+  font-weight: 800;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+  transition: transform 80ms, border-color 120ms, background 120ms;
+}
+
+.sl-cell.paired { background: var(--tile-hot); }
+.sl-cell.correct { border-color: #4caf50; background: rgba(76, 175, 80, 0.25); }
+.sl-cell.wrong { border-color: var(--danger); background: rgba(204, 68, 68, 0.25); }
+
+.sl-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  overflow: visible;
+}
+
+.sl-line {
+  stroke: var(--accent);
+  stroke-width: 0.7vw;
+  stroke-linecap: round;
+}
+.sl-line.correct { stroke: #4caf50; }
+.sl-line.wrong { stroke: var(--danger); }
+
+.sl-drag-line {
+  stroke: var(--accent);
+  stroke-width: 0.7vw;
+  stroke-linecap: round;
+  stroke-dasharray: 1.2vw 0.6vw;
+  opacity: 0.85;
+}
+
+.sl-btn {
+  font-size: 3vw;
+  padding: 1.4vh 5vw;
+  background: var(--accent);
+  color: #1a1a1a;
+  border: none;
+  border-radius: 1.5vw;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  align-self: center;
+}
+.sl-btn.disabled, .sl-btn:disabled { opacity: 0.4; cursor: default; }

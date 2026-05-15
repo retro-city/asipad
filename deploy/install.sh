@@ -20,7 +20,8 @@ sudo apt-get update -qq
 sudo apt-get install -y --no-install-recommends \
   python3-flask python3-pil python3-icalendar python3-dateutil \
   fonts-noto-color-emoji \
-  curl zram-tools cage cog wvkbd
+  curl zram-tools cage cog wvkbd ffmpeg \
+  plymouth plymouth-themes librsvg2-bin initramfs-tools
 
 echo "==> zram swap (compressed RAM-backed swap, faster than SD)"
 # zram-tools enables a default zram swap device on boot. Sized at 50% of RAM
@@ -42,6 +43,49 @@ if [[ -f /boot/firmware/config.txt ]] && ! grep -qE '^[[:space:]]*gpu_mem=' /boo
   echo "gpu_mem=64" | sudo tee -a /boot/firmware/config.txt >/dev/null
   echo "    (gpu_mem=64 added; takes effect on next reboot)"
 fi
+
+echo "==> /boot/firmware/config.txt — silence the rainbow splash"
+if [[ -f /boot/firmware/config.txt ]] && ! grep -qE '^[[:space:]]*disable_splash=' /boot/firmware/config.txt; then
+  echo "disable_splash=1" | sudo tee -a /boot/firmware/config.txt >/dev/null
+fi
+
+echo "==> /boot/firmware/cmdline.txt — quiet kernel + Plymouth splash flags"
+CMDLINE=/boot/firmware/cmdline.txt
+if [[ -f "$CMDLINE" ]]; then
+  current=$(cat "$CMDLINE")
+  for flag in quiet splash logo.nologo plymouth.ignore-serial-consoles vt.global_cursor_default=0; do
+    if ! grep -qw "$flag" "$CMDLINE"; then
+      current="$current $flag"
+    fi
+  done
+  # cmdline.txt must stay a single line.
+  echo "$current" | tr -s ' ' | sudo tee "$CMDLINE" >/dev/null
+fi
+
+echo "==> Plymouth boot splash (white ASIPad logo, centered)"
+THEME_DIR=/usr/share/plymouth/themes/asipad
+sudo install -d -m 0755 "$THEME_DIR"
+sudo install -m 0644 deploy/plymouth-theme/asipad/asipad.plymouth "$THEME_DIR/"
+sudo install -m 0644 deploy/plymouth-theme/asipad/asipad.script  "$THEME_DIR/"
+# Rasterize the white SVG to a PNG sized for the panel. Keep the source
+# vector in the repo; regenerate the PNG every install so an SVG edit
+# propagates without a separate asset commit.
+TMP_PNG=$(mktemp --suffix=.png)
+rsvg-convert -w 720 assets/asipad-white.svg -o "$TMP_PNG"
+sudo install -m 0644 "$TMP_PNG" "$THEME_DIR/logo.png"
+rm -f "$TMP_PNG"
+# `plymouth-set-default-theme` isn't shipped on Pi OS Trixie's plymouth
+# package — write the daemon config directly (works on every distro)
+# and rebuild the initramfs by hand. The previous use of the helper
+# silently no-op'd because the binary was missing.
+sudo install -d -m 0755 /etc/plymouth
+printf "[Daemon]\nTheme=asipad\n" | sudo tee /etc/plymouth/plymouthd.conf >/dev/null
+# Maintain the alternatives symlink too if the alternatives system is in use.
+if command -v update-alternatives >/dev/null 2>&1 \
+  && update-alternatives --query default.plymouth >/dev/null 2>&1; then
+  sudo update-alternatives --set default.plymouth "$THEME_DIR/asipad.plymouth" >/dev/null 2>&1 || true
+fi
+sudo update-initramfs -u >/dev/null
 
 echo "==> sudoers fragment"
 sed "s/__USER__/$KIOSK_USER/g" deploy/sudoers-kiosk \

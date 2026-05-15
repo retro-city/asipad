@@ -39,10 +39,29 @@ CURRENT_BG_FILE = DATA / "current-bg.txt"
 ACTIVE_STORIES_FILE = STORIES_DIR / "active.txt"
 CONFIG_FILE = DATA / "config.json"
 EVENTS_FILE = DATA / "events.json"
+COINS_FILE = DATA / "coins.json"
+GIF_COSTS_FILE = DATA / "gif_costs.json"
+DEFAULT_GIF_COST = 9
+GIF_UNLOCK_SECONDS = 3 * 60
 
-DEFAULT_CONFIG = {"heading": "ASIPad", "nivaa": "lett", "gender": "female"}
-NIVAA_VALUES = ("lett", "medium", "vanskelig")
+DEFAULT_CONFIG = {
+    "heading": "ASIPad",
+    "level": "easy",
+    "gender": "female",
+    "admin_lang": "no",
+    "kiosk_lang": "no",
+    "show_logo": True,
+    "show_heading": True,
+    "lock_pattern": [],
+    "time_budget_minutes": 15,
+    "time_extension_pattern": ["red", "green", "blue", "blue", "green", "red"],
+    "time_extension_options": [10, 15, 20],
+}
+LEVEL_VALUES = ("easy", "medium", "hard")
 GENDER_VALUES = ("male", "female")
+LANG_VALUES = ("no", "en", "ua")
+LOCK_COLORS = ("red", "orange", "yellow", "green", "blue", "violet")
+LEGACY_LEVEL_MAP = {"lett": "easy", "medium": "medium", "vanskelig": "hard"}
 DATA.mkdir(exist_ok=True)
 BG_DIR.mkdir(exist_ok=True)
 JOBS_DIR.mkdir(exist_ok=True)
@@ -60,9 +79,12 @@ ADMIN_PW_FILE = Path.home() / ".asipad-admin-password"
 DEFAULT_ADMIN_PASSWORD = "asipad"
 
 ALLOWED_BG = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
-MAX_UPLOAD_BYTES = 16 * 1024 * 1024  # 16 MiB before resize
+MAX_UPLOAD_BYTES = 16 * 1024 * 1024  # 16 MiB before resize (images)
+MAX_VIDEO_BYTES = 200 * 1024 * 1024  # 200 MiB per video — kid clips, not movies
 MAX_BG_DIM = (1280, 720)             # display resolution; larger doesn't help cog
 WEBP_QUALITY = 78
+ALLOWED_VIDEO = {".mp4", ".webm", ".mov", ".m4v"}
+ALLOWED_TRAINING_MEDIA = ALLOWED_BG | ALLOWED_VIDEO  # gif/png/webp/jpg + video
 
 
 def _migrate_legacy_bg() -> None:
@@ -84,7 +106,7 @@ def _migrate_legacy_bg() -> None:
 _migrate_legacy_bg()
 
 app = Flask(__name__, static_folder=None)
-app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES + 4096
+app.config["MAX_CONTENT_LENGTH"] = max(MAX_UPLOAD_BYTES, MAX_VIDEO_BYTES) + 8192
 log = logging.getLogger("asipad")
 
 
@@ -211,17 +233,91 @@ def _normalize_bg(file_storage) -> bytes:
     return buf.getvalue()
 
 
+def _generate_gif_poster(gif_path: Path, poster_path: Path) -> bool:
+    """First-frame JPG so the gallery tile can be a still image instead
+    of an animated GIF (avoids 6 simultaneously-animating tiles eating
+    CPU on the Pi). Pillow handles GIF and animated WebP."""
+    try:
+        with Image.open(gif_path) as im:
+            im.seek(0)
+            frame = im.convert("RGB")
+            frame.thumbnail((640, 640), Image.LANCZOS)
+            frame.save(poster_path, "JPEG", quality=82)
+        return poster_path.is_file()
+    except Exception as e:
+        log.warning("gif poster generation skipped: %s", e)
+        return False
+
+
+def _generate_video_poster(video_path: Path, poster_path: Path) -> bool:
+    """Run ffmpeg to extract a single frame near the start of `video_path`
+    as a 480-px-wide JPG at `poster_path`. Returns True on success.
+    Failures (missing ffmpeg, corrupt input) are logged and ignored — the
+    gallery falls back to the bare video element."""
+    try:
+        r = subprocess.run(
+            [
+                "ffmpeg", "-y",
+                "-ss", "0.5",
+                "-i", str(video_path),
+                "-frames:v", "1",
+                "-vf", "scale=480:-2",
+                "-q:v", "4",
+                str(poster_path),
+            ],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=30,
+        )
+        return r.returncode == 0 and poster_path.is_file()
+    except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+        log.warning("video poster generation skipped: %s", e)
+        return False
+
+
+LOCALES_DIR = FRONTEND / "locales"
+
+
+def load_locale_dict(code: str) -> dict:
+    """Read a locale JSON file. Falls back to Norwegian on miss/parse error."""
+    if code not in LANG_VALUES:
+        code = "no"
+    p = LOCALES_DIR / f"{code}.json"
+    if not p.exists():
+        p = LOCALES_DIR / "no.json"
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _i18n_inline(locale: str) -> str:
+    data = load_locale_dict(locale)
+    return (
+        "<script>window.__I18N__ = "
+        + json.dumps({"locale": locale, "dict": data}, ensure_ascii=False)
+        + ";</script>"
+    )
+
+
 @app.route("/")
 def index():
-    # Inline CSS + JS into the HTML so a cold load is one HTTP request
-    # instead of three. The frontend keeps separate files for editing —
+    # Inline CSS + i18n + JS into the HTML so a cold load is one HTTP request
+    # instead of four. The frontend keeps separate files for editing —
     # the server splices them at request time.
+    cfg = load_config()
     html = (FRONTEND / "index.html").read_text()
     css = (FRONTEND / "style.css").read_text()
+    i18n_js = (FRONTEND / "i18n.js").read_text()
     js = (FRONTEND / "app.js").read_text()
     html = html.replace(
         '<link rel="stylesheet" href="style.css">',
         f"<style>\n{css}\n</style>",
+    )
+    html = html.replace(
+        '<script src="i18n.js"></script>',
+        _i18n_inline(cfg.get("kiosk_lang", "no")) + f"\n<script>\n{i18n_js}\n</script>",
     )
     html = html.replace(
         '<script src="app.js"></script>',
@@ -234,7 +330,40 @@ def index():
 def admin_index():
     if (resp := require_admin()) is not None:
         return resp
-    return send_from_directory(FRONTEND, "admin.html")
+    cfg = load_config()
+    html = (FRONTEND / "admin.html").read_text()
+    i18n_js = (FRONTEND / "i18n.js").read_text()
+    html = html.replace(
+        '<script src="i18n.js"></script>',
+        _i18n_inline(cfg.get("admin_lang", "no")) + f"\n<script>\n{i18n_js}\n</script>",
+    )
+    return html, 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+@app.get("/locales/<code>.json")
+def serve_locale(code):
+    if code not in LANG_VALUES:
+        return jsonify({}), 404
+    p = LOCALES_DIR / f"{code}.json"
+    if not p.exists():
+        return jsonify({}), 404
+    return send_from_directory(LOCALES_DIR, f"{code}.json", mimetype="application/json; charset=utf-8")
+
+
+# Static assets — logos, icons. Restricted to a handful of safe extensions so
+# this can't be used to read arbitrary repo files.
+ASSETS_DIR = ROOT / "assets"
+_ALLOWED_ASSET_EXT = {".svg", ".png", ".jpg", ".jpeg", ".webp", ".ico"}
+
+
+@app.get("/assets/<path:name>")
+def serve_asset(name):
+    if "/" in name or "\\" in name or name.startswith("."):
+        return ("", 404)
+    p = ASSETS_DIR / name
+    if not p.is_file() or p.suffix.lower() not in _ALLOWED_ASSET_EXT:
+        return ("", 404)
+    return send_from_directory(ASSETS_DIR, name)
 
 
 @app.post("/admin/background")
@@ -334,6 +463,310 @@ def api_set_background():
         return jsonify(error="not found"), 404
     CURRENT_BG_FILE.write_text(name)
     return jsonify(ok=True, version=int(p.stat().st_mtime))
+
+
+# --- BILDER: picture gallery (FRITID/BILDER) ---
+
+PICTURES_DIR = DATA / "pictures"
+PICTURES_DIR.mkdir(exist_ok=True)
+
+
+def list_pictures():
+    if not PICTURES_DIR.exists():
+        return []
+    return sorted(
+        (f for f in PICTURES_DIR.iterdir() if f.is_file() and f.suffix.lower() in ALLOWED_BG),
+        key=lambda f: f.stat().st_mtime,
+        reverse=True,
+    )
+
+
+@app.get("/api/pictures")
+def api_pictures():
+    items = []
+    for f in list_pictures():
+        mtime = int(f.stat().st_mtime)
+        items.append({
+            "id": f.name,
+            "url": f"/api/pictures/{f.name}?v={mtime}",
+            "mtime": mtime,
+        })
+    return jsonify(items)
+
+
+@app.get("/api/pictures/<name>")
+def api_picture_file(name):
+    if "/" in name or ".." in name:
+        abort(400)
+    return send_from_directory(PICTURES_DIR, name, max_age=0)
+
+
+@app.post("/admin/pictures")
+def admin_upload_picture():
+    if (resp := require_admin()) is not None:
+        return resp
+    file = request.files.get("file")
+    if file is None or not file.filename:
+        return jsonify(error="missing file"), 400
+    ext = Path(file.filename).suffix.lower()
+    if ext not in ALLOWED_BG:
+        return jsonify(error=f"extension {ext} not allowed"), 400
+    try:
+        data = _normalize_bg(file)
+    except Exception as e:
+        return jsonify(error=f"could not process image: {e}"), 400
+    name = f"{int(time.time() * 1000)}.webp"
+    (PICTURES_DIR / name).write_bytes(data)
+    return jsonify(ok=True, id=name, bytes=len(data))
+
+
+@app.post("/admin/pictures/delete")
+def admin_delete_picture():
+    if (resp := require_admin()) is not None:
+        return resp
+    body = request.get_json(silent=True) or {}
+    name = body.get("id", "")
+    if not name or "/" in name or ".." in name:
+        return jsonify(error="bad id"), 400
+    p = PICTURES_DIR / name
+    if not p.is_file():
+        return jsonify(error="not found"), 404
+    p.unlink()
+    return jsonify(ok=True)
+
+
+# --- GIF: animated-image gallery (FRITID/GIF) ---
+# Goes through WebKit's image pipeline (no GStreamer), so it actually
+# plays smoothly on a Pi Zero 2 W. Source clips should be converted to
+# GIF on a desktop before upload — see README.
+
+GIFS_DIR = DATA / "gifs"
+GIFS_DIR.mkdir(exist_ok=True)
+ALLOWED_GIF = {".gif", ".webp"}
+MAX_GIF_BYTES = 25 * 1024 * 1024  # 25 MiB per gif
+
+
+def list_gifs():
+    if not GIFS_DIR.exists():
+        return []
+    return sorted(
+        (f for f in GIFS_DIR.iterdir() if f.is_file() and f.suffix.lower() in ALLOWED_GIF),
+        key=lambda f: f.stat().st_mtime,
+        reverse=True,
+    )
+
+
+def load_gif_costs() -> dict:
+    if not GIF_COSTS_FILE.exists():
+        return {}
+    try:
+        d = json.loads(GIF_COSTS_FILE.read_text())
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+
+def save_gif_costs(d: dict) -> None:
+    GIF_COSTS_FILE.write_text(json.dumps(d, ensure_ascii=False, indent=2))
+
+
+def gif_cost_for(name: str, costs: dict | None = None) -> int:
+    """A per-GIF override or the default. 0 means free."""
+    if costs is None:
+        costs = load_gif_costs()
+    if name in costs:
+        try:
+            return max(0, int(costs[name]))
+        except (TypeError, ValueError):
+            return DEFAULT_GIF_COST
+    return DEFAULT_GIF_COST
+
+
+@app.get("/api/gifs")
+def api_gifs():
+    costs = load_gif_costs()
+    items = []
+    for f in list_gifs():
+        mtime = int(f.stat().st_mtime)
+        item = {
+            "id": f.name,
+            "url": f"/api/gifs/{f.name}?v={mtime}",
+            "mtime": mtime,
+            "cost": gif_cost_for(f.name, costs),
+        }
+        poster = f.with_suffix(".jpg")
+        if poster.is_file():
+            item["poster_url"] = f"/api/gifs/{poster.name}?v={int(poster.stat().st_mtime)}"
+        items.append(item)
+    return jsonify(items)
+
+
+@app.post("/admin/gifs/cost")
+def admin_set_gif_cost():
+    if (resp := require_admin()) is not None:
+        return resp
+    body = request.get_json(silent=True) or {}
+    name = str(body.get("id") or "")
+    if not name or "/" in name or ".." in name:
+        return jsonify(error="bad id"), 400
+    if not (GIFS_DIR / name).is_file():
+        return jsonify(error="not found"), 404
+    try:
+        cost = int(body.get("cost"))
+    except (TypeError, ValueError):
+        return jsonify(error="bad cost"), 400
+    if cost < 0:
+        return jsonify(error="bad cost"), 400
+    costs = load_gif_costs()
+    if cost == DEFAULT_GIF_COST:
+        costs.pop(name, None)  # don't store entries that match the default
+    else:
+        costs[name] = cost
+    save_gif_costs(costs)
+    return jsonify(ok=True, id=name, cost=cost)
+
+
+@app.get("/api/gifs/<name>")
+def api_gif_file(name):
+    if "/" in name or ".." in name:
+        abort(400)
+    return send_from_directory(GIFS_DIR, name, max_age=0)
+
+
+@app.post("/admin/gifs")
+def admin_upload_gif():
+    if (resp := require_admin()) is not None:
+        return resp
+    file = request.files.get("file")
+    if file is None or not file.filename:
+        return jsonify(error="missing file"), 400
+    ext = Path(file.filename).suffix.lower()
+    if ext not in ALLOWED_GIF:
+        return jsonify(error=f"extension {ext} not allowed"), 400
+    name = f"{int(time.time() * 1000)}{ext}"
+    target = GIFS_DIR / name
+    file.save(target)
+    size = target.stat().st_size
+    if size > MAX_GIF_BYTES:
+        target.unlink()
+        return jsonify(error="file too large"), 413
+    poster = target.with_suffix(".jpg")
+    poster_ok = _generate_gif_poster(target, poster)
+    return jsonify(
+        ok=True, id=name, bytes=size,
+        poster_url=f"/api/gifs/{poster.name}" if poster_ok else None,
+    )
+
+
+@app.post("/admin/gifs/delete")
+def admin_delete_gif():
+    if (resp := require_admin()) is not None:
+        return resp
+    body = request.get_json(silent=True) or {}
+    name = body.get("id", "")
+    if not name or "/" in name or ".." in name:
+        return jsonify(error="bad id"), 400
+    p = GIFS_DIR / name
+    if not p.is_file():
+        return jsonify(error="not found"), 404
+    p.unlink()
+    poster = p.with_suffix(".jpg")
+    if poster.is_file():
+        poster.unlink()
+    costs = load_gif_costs()
+    if name in costs:
+        del costs[name]
+        save_gif_costs(costs)
+    return jsonify(ok=True)
+
+
+# --- VIDEO: video gallery (FRITID/VIDEO) ---
+
+VIDEOS_DIR = DATA / "videos"
+VIDEOS_DIR.mkdir(exist_ok=True)
+
+
+def list_videos():
+    if not VIDEOS_DIR.exists():
+        return []
+    return sorted(
+        (f for f in VIDEOS_DIR.iterdir() if f.is_file() and f.suffix.lower() in ALLOWED_VIDEO),
+        key=lambda f: f.stat().st_mtime,
+        reverse=True,
+    )
+
+
+def _video_poster_path(video: Path) -> Path:
+    return video.with_suffix(".jpg")
+
+
+@app.get("/api/videos")
+def api_videos():
+    items = []
+    for f in list_videos():
+        mtime = int(f.stat().st_mtime)
+        poster = _video_poster_path(f)
+        item = {
+            "id": f.name,
+            "url": f"/api/videos/{f.name}?v={mtime}",
+            "mtime": mtime,
+        }
+        if poster.is_file():
+            item["poster_url"] = f"/api/videos/{poster.name}?v={int(poster.stat().st_mtime)}"
+        items.append(item)
+    return jsonify(items)
+
+
+@app.get("/api/videos/<name>")
+def api_video_file(name):
+    if "/" in name or ".." in name:
+        abort(400)
+    # conditional=True so Werkzeug honours Range requests — required for
+    # in-browser seek without re-downloading the whole clip.
+    return send_from_directory(VIDEOS_DIR, name, max_age=0, conditional=True)
+
+
+@app.post("/admin/videos")
+def admin_upload_video():
+    if (resp := require_admin()) is not None:
+        return resp
+    file = request.files.get("file")
+    if file is None or not file.filename:
+        return jsonify(error="missing file"), 400
+    ext = Path(file.filename).suffix.lower()
+    if ext not in ALLOWED_VIDEO:
+        return jsonify(error=f"extension {ext} not allowed"), 400
+    name = f"{int(time.time() * 1000)}{ext}"
+    target = VIDEOS_DIR / name
+    file.save(target)
+    size = target.stat().st_size
+    if size > MAX_VIDEO_BYTES:
+        target.unlink()
+        return jsonify(error="file too large"), 413
+    poster = _video_poster_path(target)
+    poster_ok = _generate_video_poster(target, poster)
+    return jsonify(
+        ok=True, id=name, bytes=size,
+        poster_url=f"/api/videos/{poster.name}" if poster_ok else None,
+    )
+
+
+@app.post("/admin/videos/delete")
+def admin_delete_video():
+    if (resp := require_admin()) is not None:
+        return resp
+    body = request.get_json(silent=True) or {}
+    name = body.get("id", "")
+    if not name or "/" in name or ".." in name:
+        return jsonify(error="bad id"), 400
+    p = VIDEOS_DIR / name
+    if not p.is_file():
+        return jsonify(error="not found"), 404
+    p.unlink()
+    poster = _video_poster_path(p)
+    if poster.is_file():
+        poster.unlink()
+    return jsonify(ok=True)
 
 
 # --- JOBB: simple file-backed text store for the kid's writing tile ---
@@ -602,6 +1035,253 @@ def api_upload_story_img():
     return jsonify(ok=True, name=name, url=f"/api/stories/img/{name}")
 
 
+# --- TRENING: training sessions (FRITID/TRENING) — same shape as stories
+# but each page can have an image, gif, or video as its media. ---
+
+TRAININGS_DIR = DATA / "trainings"
+TRAINING_MEDIA_DIR = TRAININGS_DIR / "media"
+ACTIVE_TRAININGS_FILE = TRAININGS_DIR / "active.txt"
+TRAININGS_DIR.mkdir(exist_ok=True)
+TRAINING_MEDIA_DIR.mkdir(exist_ok=True)
+TRAINING_ID_RE = re.compile(r"^\d+$")
+MAX_TRAINING_BYTES = 256 * 1024
+MAX_ACTIVE_TRAININGS = 3
+
+
+def _training_path(tid: str):
+    if not TRAINING_ID_RE.match(tid):
+        return None
+    return TRAININGS_DIR / f"{tid}.json"
+
+
+def _media_kind(name: str | None):
+    if not name:
+        return None
+    ext = Path(name).suffix.lower()
+    if ext in ALLOWED_VIDEO:
+        return "video"
+    if ext in ALLOWED_BG:
+        return "image"
+    return None
+
+
+def _training_summary(p: Path) -> dict:
+    try:
+        d = json.loads(p.read_text())
+    except Exception:
+        d = {}
+    return {
+        "id": p.stem,
+        "title": str(d.get("title") or "Uten tittel"),
+        "page_count": len(d.get("pages") or []),
+        "mtime": int(p.stat().st_mtime),
+    }
+
+
+def _training_full(p: Path) -> dict:
+    try:
+        d = json.loads(p.read_text())
+    except Exception:
+        d = {}
+    pages = []
+    for page in d.get("pages") or []:
+        m = page.get("media") or None
+        kind = _media_kind(m)
+        poster_url = None
+        if m and kind == "video":
+            poster = TRAINING_MEDIA_DIR / (Path(m).stem + ".jpg")
+            if poster.is_file():
+                poster_url = f"/api/trainings/media/{poster.name}"
+        pages.append({
+            "text": str(page.get("text") or ""),
+            "media": m,
+            "media_url": f"/api/trainings/media/{m}" if m else None,
+            "media_kind": kind,
+            "poster_url": poster_url,
+        })
+    return {
+        "id": p.stem,
+        "title": str(d.get("title") or "Uten tittel"),
+        "pages": pages,
+        "mtime": int(p.stat().st_mtime),
+    }
+
+
+def _read_active_trainings() -> list[str]:
+    if not ACTIVE_TRAININGS_FILE.exists():
+        return []
+    return [
+        ln.strip()
+        for ln in ACTIVE_TRAININGS_FILE.read_text().splitlines()
+        if ln.strip() and TRAINING_ID_RE.match(ln.strip())
+    ][:MAX_ACTIVE_TRAININGS]
+
+
+def _write_active_trainings(ids) -> None:
+    valid = []
+    for i in ids:
+        i = str(i).strip()
+        if not TRAINING_ID_RE.match(i):
+            continue
+        if not (TRAININGS_DIR / f"{i}.json").is_file():
+            continue
+        valid.append(i)
+    ACTIVE_TRAININGS_FILE.write_text("\n".join(valid[:MAX_ACTIVE_TRAININGS]))
+
+
+def _validate_training_payload(body: dict):
+    title = str(body.get("title") or "").strip() or "Uten tittel"
+    raw_pages = body.get("pages") or []
+    pages = []
+    for p in raw_pages:
+        if not isinstance(p, dict):
+            continue
+        text = str(p.get("text") or "")
+        m = p.get("media")
+        if m is not None:
+            m = str(m).strip()
+            if "/" in m or ".." in m or not m:
+                m = None
+        pages.append({"text": text, "media": m})
+    if len(json.dumps({"title": title, "pages": pages}).encode("utf-8")) > MAX_TRAINING_BYTES:
+        abort(413)
+    return title, pages
+
+
+@app.get("/api/trainings")
+def api_list_trainings():
+    items = [_training_summary(p) for p in sorted(
+        TRAININGS_DIR.glob("*.json"),
+        key=lambda f: f.stat().st_mtime,
+        reverse=True,
+    )]
+    return jsonify(items)
+
+
+@app.get("/api/trainings/active")
+def api_active_trainings():
+    out = []
+    for tid in _read_active_trainings():
+        p = _training_path(tid)
+        if p and p.is_file():
+            out.append(_training_summary(p))
+    return jsonify(out)
+
+
+@app.post("/api/trainings/active")
+def api_set_active_trainings():
+    if (resp := require_admin()) is not None:
+        return resp
+    body = request.get_json(silent=True) or {}
+    _write_active_trainings([str(i) for i in (body.get("ids") or [])])
+    return jsonify(active=_read_active_trainings())
+
+
+@app.post("/api/trainings")
+def api_create_training():
+    if (resp := require_admin()) is not None:
+        return resp
+    body = request.get_json(silent=True) or {}
+    title, pages = _validate_training_payload(body)
+    tid = str(int(time.time() * 1000))
+    p = TRAININGS_DIR / f"{tid}.json"
+    p.write_text(json.dumps({"title": title, "pages": pages}, ensure_ascii=False))
+    return jsonify(_training_full(p))
+
+
+@app.get("/api/trainings/<tid>")
+def api_get_training(tid: str):
+    p = _training_path(tid)
+    if p is None or not p.is_file():
+        return jsonify(error="not found"), 404
+    return jsonify(_training_full(p))
+
+
+@app.put("/api/trainings/<tid>")
+def api_update_training(tid: str):
+    if (resp := require_admin()) is not None:
+        return resp
+    p = _training_path(tid)
+    if p is None or not p.is_file():
+        return jsonify(error="not found"), 404
+    body = request.get_json(silent=True) or {}
+    title, pages = _validate_training_payload(body)
+    p.write_text(json.dumps({"title": title, "pages": pages}, ensure_ascii=False))
+    return jsonify(_training_full(p))
+
+
+@app.delete("/api/trainings/<tid>")
+def api_delete_training(tid: str):
+    if (resp := require_admin()) is not None:
+        return resp
+    p = _training_path(tid)
+    if p is None:
+        return jsonify(error="bad id"), 400
+    if p.is_file():
+        p.unlink()
+    active = _read_active_trainings()
+    if tid in active:
+        active.remove(tid)
+        _write_active_trainings(active)
+    return jsonify(ok=True)
+
+
+@app.get("/api/trainings/media/<name>")
+def api_training_media(name: str):
+    if "/" in name or ".." in name:
+        abort(400)
+    return send_from_directory(TRAINING_MEDIA_DIR, name, max_age=0, conditional=True)
+
+
+@app.post("/api/trainings/media")
+def api_upload_training_media():
+    if (resp := require_admin()) is not None:
+        return resp
+    file = request.files.get("file")
+    if file is None or not file.filename:
+        return jsonify(error="missing file"), 400
+    ext = Path(file.filename).suffix.lower()
+    if ext not in ALLOWED_TRAINING_MEDIA:
+        return jsonify(error=f"extension {ext} not allowed"), 400
+    if ext in ALLOWED_VIDEO:
+        # Save video as-is — no transcoding step on the Pi — but extract
+        # a JPG poster so the gallery doesn't have to decode metadata for
+        # every tile on every page render.
+        name = f"{int(time.time() * 1000)}{ext}"
+        target = TRAINING_MEDIA_DIR / name
+        file.save(target)
+        if target.stat().st_size > MAX_VIDEO_BYTES:
+            target.unlink()
+            return jsonify(error="file too large"), 413
+        _generate_video_poster(target, target.with_suffix(".jpg"))
+    elif ext == ".gif":
+        # Preserve animation; webp re-encode would flatten it.
+        data = file.read()
+        if len(data) > MAX_UPLOAD_BYTES:
+            return jsonify(error="file too large"), 413
+        name = f"{int(time.time() * 1000)}.gif"
+        (TRAINING_MEDIA_DIR / name).write_bytes(data)
+    else:
+        # Static image — normalize to webp like backgrounds.
+        try:
+            data = _normalize_bg(file)
+        except Exception as e:
+            return jsonify(error=f"could not process image: {e}"), 400
+        name = f"{int(time.time() * 1000)}.webp"
+        (TRAINING_MEDIA_DIR / name).write_bytes(data)
+    kind = _media_kind(name)
+    poster_url = None
+    if kind == "video":
+        poster = TRAINING_MEDIA_DIR / (Path(name).stem + ".jpg")
+        if poster.is_file():
+            poster_url = f"/api/trainings/media/{poster.name}"
+    return jsonify(
+        ok=True, name=name,
+        url=f"/api/trainings/media/{name}",
+        kind=kind, poster_url=poster_url,
+    )
+
+
 @app.post("/api/shutdown")
 def shutdown():
     require_local()
@@ -623,6 +1303,86 @@ def health():
     return jsonify(ok=True)
 
 
+# --- BANK: simple coin counter for SKOLE rewards ---
+
+
+def load_coins() -> int:
+    if not COINS_FILE.exists():
+        return 0
+    try:
+        d = json.loads(COINS_FILE.read_text())
+        return int(d.get("count") or 0) if isinstance(d, dict) else int(d)
+    except Exception:
+        return 0
+
+
+def save_coins(count: int) -> None:
+    COINS_FILE.write_text(json.dumps({"count": int(count)}))
+
+
+@app.get("/api/coins")
+def api_coins():
+    return jsonify(count=load_coins())
+
+
+@app.post("/api/lock_pattern")
+def api_set_lock_pattern_local():
+    """Localhost-only — lets the kiosk's VALG → Lås page set the password
+    without going through admin auth. Same validation as the admin
+    /api/config POST."""
+    require_local()
+    body = request.get_json(silent=True) or {}
+    raw = body.get("pattern")
+    if raw in (None, []):
+        new = []
+    elif (
+        isinstance(raw, list)
+        and len(raw) == 3
+        and all(isinstance(c, str) and c in LOCK_COLORS for c in raw)
+    ):
+        new = list(raw)
+    else:
+        return jsonify(error="bad pattern"), 400
+    cfg = load_config()
+    cfg["lock_pattern"] = new
+    save_config(cfg)
+    return jsonify(lock_pattern=new)
+
+
+@app.post("/api/coins/spend")
+def api_coins_spend():
+    body = request.get_json(silent=True) or {}
+    try:
+        n = int(body.get("n") or 0)
+    except (TypeError, ValueError):
+        return jsonify(error="bad n"), 400
+    if n <= 0:
+        return jsonify(error="bad n"), 400
+    current = load_coins()
+    if current < n:
+        return jsonify(error="insufficient", balance=current), 402
+    new = current - n
+    save_coins(new)
+    return jsonify(count=new, spent=n)
+
+
+@app.post("/api/coins/earn")
+def api_coins_earn():
+    # No admin auth — earning happens from the kiosk on task completion.
+    # The LAN allowlist (above) is the only gate. Acceptable for kid-only use.
+    n = load_coins() + 1
+    save_coins(n)
+    return jsonify(count=n)
+
+
+@app.post("/api/coins/reset")
+def api_coins_reset():
+    if (resp := require_admin()) is not None:
+        return resp
+    save_coins(0)
+    return jsonify(count=0)
+
+
 @app.get("/api/version")
 def version():
     # Use the newest mtime across the inlined frontend bundle so editing any
@@ -636,15 +1396,34 @@ def version():
     idx_v = max(mtimes) if mtimes else 0
     bg = current_background()
     bg_v = int(bg.stat().st_mtime) if bg else 0
+    try:
+        events_v = int(EVENTS_FILE.stat().st_mtime) if EVENTS_FILE.exists() else 0
+    except FileNotFoundError:
+        events_v = 0
     return jsonify(
         version=idx_v,
         background=bg_v,
+        events=events_v,
+        coins=load_coins(),
         started=STARTED,
         config=load_config(),
     )
 
 
-# --- Runtime config (heading, nivaa) ---
+# --- Runtime config (heading, level, gender, admin_lang, kiosk_lang) ---
+
+
+def _migrate_config(cfg: dict) -> dict:
+    """Legacy schema → English keys / current locale codes."""
+    if "nivaa" in cfg and "level" not in cfg:
+        cfg["level"] = LEGACY_LEVEL_MAP.get(str(cfg.pop("nivaa")), "easy")
+    if cfg.get("level") in LEGACY_LEVEL_MAP:
+        cfg["level"] = LEGACY_LEVEL_MAP[cfg["level"]]
+    # Earlier prototype used "uk" for Ukrainian; ISO/locale code is now "ua".
+    for key in ("admin_lang", "kiosk_lang"):
+        if cfg.get(key) == "uk":
+            cfg[key] = "ua"
+    return cfg
 
 
 def load_config() -> dict:
@@ -654,7 +1433,9 @@ def load_config() -> dict:
         cfg = json.loads(CONFIG_FILE.read_text())
     except Exception:
         return dict(DEFAULT_CONFIG)
-    return {**DEFAULT_CONFIG, **(cfg if isinstance(cfg, dict) else {})}
+    if not isinstance(cfg, dict):
+        cfg = {}
+    return {**DEFAULT_CONFIG, **_migrate_config(cfg)}
 
 
 def save_config(cfg: dict) -> None:
@@ -676,29 +1457,65 @@ def api_set_config():
         h = str(body.get("heading") or "").strip()
         if h:
             cfg["heading"] = h[:120]
-    if "nivaa" in body:
-        v = str(body.get("nivaa") or "")
-        if v in NIVAA_VALUES:
-            cfg["nivaa"] = v
+    if "level" in body:
+        v = str(body.get("level") or "")
+        if v in LEVEL_VALUES:
+            cfg["level"] = v
     if "gender" in body:
         g = str(body.get("gender") or "")
         if g in GENDER_VALUES:
             cfg["gender"] = g
-    save_config(cfg)
-    return jsonify(cfg)
-
-
-@app.post("/api/nivaa")
-def api_set_nivaa_local():
-    """Localhost-only — lets the kiosk's NIVÅ tile change difficulty
-    without going through the admin auth dance."""
-    require_local()
-    body = request.get_json(silent=True) or {}
-    v = str(body.get("value") or "")
-    if v not in NIVAA_VALUES:
-        return jsonify(error="bad value"), 400
-    cfg = load_config()
-    cfg["nivaa"] = v
+    if "admin_lang" in body:
+        v = str(body.get("admin_lang") or "")
+        if v in LANG_VALUES:
+            cfg["admin_lang"] = v
+    if "kiosk_lang" in body:
+        v = str(body.get("kiosk_lang") or "")
+        if v in LANG_VALUES:
+            cfg["kiosk_lang"] = v
+    if "show_logo" in body:
+        cfg["show_logo"] = bool(body.get("show_logo"))
+    if "show_heading" in body:
+        cfg["show_heading"] = bool(body.get("show_heading"))
+    if "lock_pattern" in body:
+        raw = body.get("lock_pattern")
+        # null or empty list clears the lock; otherwise must be exactly 3
+        # rainbow-palette colour names. Anything malformed is rejected.
+        if raw is None or (isinstance(raw, list) and len(raw) == 0):
+            cfg["lock_pattern"] = []
+        elif (
+            isinstance(raw, list)
+            and len(raw) == 3
+            and all(isinstance(c, str) and c in LOCK_COLORS for c in raw)
+        ):
+            cfg["lock_pattern"] = list(raw)
+        else:
+            return jsonify(error="bad lock_pattern"), 400
+    if "time_budget_minutes" in body:
+        try:
+            m = int(body.get("time_budget_minutes"))
+        except (TypeError, ValueError):
+            return jsonify(error="bad time_budget_minutes"), 400
+        if m < 0 or m > 720:
+            return jsonify(error="bad time_budget_minutes"), 400
+        cfg["time_budget_minutes"] = m
+    if "time_extension_pattern" in body:
+        raw = body.get("time_extension_pattern")
+        if (isinstance(raw, list)
+                and len(raw) == 6
+                and all(isinstance(c, str) and c in LOCK_COLORS for c in raw)):
+            cfg["time_extension_pattern"] = list(raw)
+        else:
+            return jsonify(error="bad time_extension_pattern"), 400
+    if "time_extension_options" in body:
+        raw = body.get("time_extension_options")
+        try:
+            opts = [int(x) for x in (raw or [])]
+        except (TypeError, ValueError):
+            return jsonify(error="bad time_extension_options"), 400
+        if len(opts) != 3 or any(x < 1 or x > 120 for x in opts):
+            return jsonify(error="bad time_extension_options"), 400
+        cfg["time_extension_options"] = opts
     save_config(cfg)
     return jsonify(cfg)
 

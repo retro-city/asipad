@@ -1,0 +1,33 @@
+# Centered white logo, black background. No spinner — minimal boot identity.
+
+Window.SetBackgroundTopColor(0.0, 0.0, 0.0);
+Window.SetBackgroundBottomColor(0.0, 0.0, 0.0);
+
+logo.image = Image("logo.png");
+logo.sprite = Sprite(logo.image);
+
+fun place_logo() {
+    sw = Window.GetWidth();
+    sh = Window.GetHeight();
+    iw = logo.image.GetWidth();
+    ih = logo.image.GetHeight();
+    logo.sprite.SetX(sw / 2 - iw / 2);
+    logo.sprite.SetY(sh / 2 - ih / 2);
+}
+
+place_logo();
+
+# Re-center if the surface is reconfigured (rotation, mode change, etc.).
+fun on_refresh() {
+    place_logo();
+}
+Plymouth.SetRefreshFunction(on_refresh);
+
+# Suppress system password prompts that would normally render under
+# the splash — kiosk has no encrypted disk, so this never triggers in
+# practice, but ignoring keeps a stray prompt from breaking the layout.
+fun on_password() { }
+Plymouth.SetDisplayPasswordFunction(on_password);
+
+fun on_message(msg) { }
+Plymouth.SetMessageFunction(on_message);
