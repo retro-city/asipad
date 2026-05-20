@@ -20,7 +20,7 @@ sudo apt-get update -qq
 sudo apt-get install -y --no-install-recommends \
   python3-flask python3-pil python3-icalendar python3-dateutil \
   fonts-noto-color-emoji \
-  curl zram-tools cage cog wvkbd ffmpeg \
+  curl zram-tools labwc cog wvkbd unclutter ffmpeg \
   plymouth plymouth-themes librsvg2-bin initramfs-tools
 
 echo "==> zram swap (compressed RAM-backed swap, faster than SD)"
@@ -60,6 +60,32 @@ if [[ -f "$CMDLINE" ]]; then
   done
   # cmdline.txt must stay a single line.
   echo "$current" | tr -s ' ' | sudo tee "$CMDLINE" >/dev/null
+fi
+
+# Armbian (Rock 2F etc.): the kernel cmdline is built by u-boot from
+# /boot/armbianEnv.txt. We want verbosity=0 so the boot script emits
+# "quiet splash" instead of "splash=verbose", and extraargs for the
+# kiosk-specific cursor/serial-console tweaks.
+ARMBIAN_ENV=/boot/armbianEnv.txt
+if [[ -f "$ARMBIAN_ENV" ]]; then
+  echo "==> $ARMBIAN_ENV — verbosity=0 + Plymouth-friendly extraargs"
+  sudo sed -i -E 's/^verbosity=.*/verbosity=0/' "$ARMBIAN_ENV"
+  if ! grep -q '^verbosity=' "$ARMBIAN_ENV"; then
+    echo 'verbosity=0' | sudo tee -a "$ARMBIAN_ENV" >/dev/null
+  fi
+  EXTRA='plymouth.ignore-serial-consoles vt.global_cursor_default=0 logo.nologo'
+  if grep -q '^extraargs=' "$ARMBIAN_ENV"; then
+    current=$(grep '^extraargs=' "$ARMBIAN_ENV" | sed -E 's/^extraargs=//' | tr -d '"')
+    for flag in $EXTRA; do
+      if ! echo "$current" | grep -qw "$flag"; then
+        current="$current $flag"
+      fi
+    done
+    new=$(echo "$current" | tr -s ' ' | sed -E 's/^ //; s/ $//')
+    sudo sed -i -E "s|^extraargs=.*|extraargs=$new|" "$ARMBIAN_ENV"
+  else
+    echo "extraargs=$EXTRA" | sudo tee -a "$ARMBIAN_ENV" >/dev/null
+  fi
 fi
 
 echo "==> Plymouth boot splash (white ASIPad logo, centered)"

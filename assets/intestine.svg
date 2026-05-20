@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Tarm / Intestine — pink coiled tube for the NATURFAG → Kroppen game.
+     Designed for ~10vw display at any size; viewBox 100×100, rounded
+     stroke caps so the ends look organ-like rather than blunt. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-label="Tarm">
+  <!-- Outer (darker) tube -->
+  <path d="M 22 22
+           C 80 22, 92 28, 92 36
+           C 92 46, 22 42, 12 50
+           C 6 56, 12 62, 22 64
+           C 78 64, 96 62, 92 72
+           C 86 82, 36 82, 28 78"
+        fill="none"
+        stroke="#b9436d"
+        stroke-width="14"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+  <!-- Inner (lighter) highlight to suggest tube interior -->
+  <path d="M 22 22
+           C 80 22, 92 28, 92 36
+           C 92 46, 22 42, 12 50
+           C 6 56, 12 62, 22 64
+           C 78 64, 96 62, 92 72
+           C 86 82, 36 82, 28 78"
+        fill="none"
+        stroke="#f6c4d4"
+        stroke-width="5"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+</svg>

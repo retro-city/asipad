@@ -10,7 +10,9 @@ const PAGES = {
   casematch:            { titleKey: "page.school.casematch",  body: caseMatchMenuBody,        parent: "skole" },
   "skrive-storliten":   { titleKey: "page.write.casematch_no", body: () => caseMatchBody("no"), parent: "casematch" },
   "skrive-storliten-ua":{ titleKey: "page.write.casematch_ua", body: () => caseMatchBody("ua"), parent: "casematch" },
-  naturfag:             { titleKey: "page.school.naturfag",   body: naturfagBody,             parent: "skole" },
+  naturfag:             { titleKey: "page.school.naturfag",   body: naturfagMenuBody,         parent: "skole" },
+  "naturfag-kroppen":   { titleKey: "page.naturfag.body",     body: bodyGameBody,             parent: "naturfag" },
+  "naturfag-folelser":  { titleKey: "page.naturfag.feelings", body: feelingsGameBody,         parent: "naturfag" },
   tall:                 { titleKey: "page.numbers",            body: numbersBody,              parent: "skole" },
   gange:                { titleKey: "page.multiply",           body: multiplyBody,             parent: "skole" },
   jobb:                 { titleKey: "page.work",               body: workBody },
@@ -500,8 +502,170 @@ function caseMatchMenuBody() {
   ).join("")}</div>`;
 }
 
-function naturfagBody() {
-  return `<div class="lese-empty">${t("common.coming_soon")}</div>`;
+// --- NATURFAG: KROPPEN + FØLELSER (tap-the-right-thing games) -----
+// Two parallel mechanics from feature-sketches/{spill om kroppen, følelser}.
+// Show all items in a grid, prompt "Trykk på X", tap the matching tile.
+// Correct → green tile + 🪙 + next round; wrong → red flash, retry.
+
+const NATURFAG_BODY_PARTS = [
+  { id: "hjerte", emoji: "🫀", labelKey: "naturfag.body.heart" },
+  { id: "hjerne", emoji: "🧠", labelKey: "naturfag.body.brain" },
+  { id: "tarm",   image: "/assets/intestine.svg", labelKey: "naturfag.body.intestine" },
+  { id: "lunge",  emoji: "🫁", labelKey: "naturfag.body.lung" },
+  { id: "oye",    emoji: "👁️", labelKey: "naturfag.body.eye" },
+  { id: "ore",    emoji: "👂", labelKey: "naturfag.body.ear" },
+  { id: "nese",   emoji: "👃", labelKey: "naturfag.body.nose" },
+  { id: "munn",   emoji: "👄", labelKey: "naturfag.body.mouth" },
+  { id: "hand",   emoji: "✋", labelKey: "naturfag.body.hand" },
+  { id: "fot",    emoji: "🦶", labelKey: "naturfag.body.foot" },
+  { id: "tunge",   emoji: "👅", labelKey: "naturfag.body.tongue" },
+  { id: "tann",    emoji: "🦷", labelKey: "naturfag.body.tooth" },
+  { id: "skjelett",emoji: "🦴", labelKey: "naturfag.body.skeleton" },
+  { id: "muskel",  emoji: "💪", labelKey: "naturfag.body.muscle" },
+  { id: "finger",  emoji: "👆", labelKey: "naturfag.body.finger" },
+  { id: "blod",    emoji: "🩸", labelKey: "naturfag.body.blood" },
+  { id: "ben",     emoji: "🦵", labelKey: "naturfag.body.leg" },
+  { id: "dna",     emoji: "🧬", labelKey: "naturfag.body.dna" },
+];
+
+const NATURFAG_FEELINGS = [
+  { id: "glad",       emoji: "😊", labelKey: "naturfag.feel.happy" },
+  { id: "trist",      emoji: "😢", labelKey: "naturfag.feel.sad" },
+  { id: "sint",       emoji: "😠", labelKey: "naturfag.feel.angry" },
+  { id: "redd",       emoji: "😨", labelKey: "naturfag.feel.afraid" },
+  { id: "overrasket", emoji: "😮", labelKey: "naturfag.feel.surprised" },
+  { id: "trott",      emoji: "😴", labelKey: "naturfag.feel.tired" },
+  { id: "forelsket",  emoji: "😍", labelKey: "naturfag.feel.in_love" },
+  { id: "syk",        emoji: "🤒", labelKey: "naturfag.feel.sick" },
+  { id: "lattermild", emoji: "😂", labelKey: "naturfag.feel.laughing" },
+  { id: "rolig",      emoji: "😌", labelKey: "naturfag.feel.calm" },
+  { id: "flau",        emoji: "😳", labelKey: "naturfag.feel.embarrassed" },
+  { id: "stolt",       emoji: "🥹", labelKey: "naturfag.feel.proud" },
+  { id: "bekymret",    emoji: "😟", labelKey: "naturfag.feel.worried" },
+  { id: "nervos",      emoji: "😬", labelKey: "naturfag.feel.nervous" },
+  { id: "forvirret",   emoji: "😕", labelKey: "naturfag.feel.confused" },
+  { id: "kjedet",      emoji: "😒", labelKey: "naturfag.feel.bored" },
+  { id: "takknemlig",  emoji: "🙏", labelKey: "naturfag.feel.grateful" },
+  { id: "modig",       emoji: "😤", labelKey: "naturfag.feel.brave" },
+  { id: "frisk",       emoji: "💃", labelKey: "naturfag.feel.energetic" },
+  { id: "fornoyd",     emoji: "🙂", labelKey: "naturfag.feel.content" },
+];
+
+const NATURFAG_DISPLAY_COUNT = 6; // tiles per round (incl. the target)
+
+let tapGame = null;
+
+function naturfagMenuBody() {
+  const cards = [
+    { route: "naturfag-kroppen",  icon: "🫀", labelKey: "page.naturfag.body" },
+    { route: "naturfag-folelser", icon: "😊", labelKey: "page.naturfag.feelings" },
+  ];
+  return `<div class="story-list">${cards.map((c) =>
+    `<button class="story-card" data-route="${c.route}"><div class="story-flag">${c.icon}</div><div class="story-title">${t(c.labelKey)}</div></button>`
+  ).join("")}</div>`;
+}
+
+function shuffleArray(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function sampleRound(pool, target) {
+  // Always include the target; fill the rest with distinct distractors
+  // from the pool. With small pools this just returns the whole pool.
+  const distractors = pool.filter((x) => x.id !== target.id);
+  const need = Math.min(NATURFAG_DISPLAY_COUNT - 1, distractors.length);
+  const picked = shuffleArray(distractors).slice(0, need);
+  return shuffleArray([...picked, target]);
+}
+
+function startTapGame(items) {
+  const target = items[Math.floor(Math.random() * items.length)];
+  tapGame = {
+    pool: items,
+    layout: sampleRound(items, target),
+    target,
+    state: "input",   // "input" | "correct" | "wrong"
+    wrongId: null,
+  };
+}
+
+function nextTapRound() {
+  if (!tapGame) return;
+  const { pool, target: prev } = tapGame;
+  let next = prev;
+  for (let i = 0; i < 8 && next.id === prev.id; i++) {
+    next = pool[Math.floor(Math.random() * pool.length)];
+  }
+  tapGame.target = next;
+  tapGame.layout = sampleRound(pool, next);
+  tapGame.state = "input";
+  tapGame.wrongId = null;
+}
+
+function renderTapGame() {
+  if (!tapGame) return "";
+  const { layout, target, state, wrongId } = tapGame;
+  const cols = layout.length <= 4 ? 2 : 3;
+  const cells = layout.map((it) => {
+    const cls = ["tap-tile",
+      state === "correct" && it.id === target.id ? "correct" : "",
+      wrongId === it.id ? "wrong" : "",
+    ].filter(Boolean).join(" ");
+    const visual = it.image
+      ? `<img class="tap-emoji tap-img" src="${it.image}" alt="">`
+      : `<div class="tap-emoji">${it.emoji}</div>`;
+    return `<button class="${cls}" data-action="tap-pick" data-id="${it.id}">
+      ${visual}
+      <div class="tap-label">${t(it.labelKey)}</div>
+    </button>`;
+  }).join("");
+  const feedback =
+    state === "correct" ? t("common.good_job") :
+    state === "wrong"   ? t("common.try_again") : "";
+  return `
+    <div class="tap-game">
+      <div class="tap-prompt">${t("naturfag.tap_prompt", { what: t(target.labelKey) })}</div>
+      <div class="tap-grid cols-${cols}">${cells}</div>
+      <div class="tap-feedback ${state}">${feedback}</div>
+    </div>`;
+}
+
+function bodyGameBody() {
+  startTapGame(NATURFAG_BODY_PARTS);
+  return renderTapGame();
+}
+
+function feelingsGameBody() {
+  startTapGame(NATURFAG_FEELINGS);
+  return renderTapGame();
+}
+
+function tapPick(id) {
+  if (!tapGame || tapGame.state === "correct") return;
+  if (id === tapGame.target.id) {
+    tapGame.state = "correct";
+    pageBody.innerHTML = renderTapGame();
+    earnCoin();
+    setTimeout(() => {
+      nextTapRound();
+      pageBody.innerHTML = renderTapGame();
+    }, 1500);
+  } else {
+    tapGame.state = "wrong";
+    tapGame.wrongId = id;
+    pageBody.innerHTML = renderTapGame();
+    setTimeout(() => {
+      if (!tapGame || tapGame.state !== "wrong") return;
+      tapGame.state = "input";
+      tapGame.wrongId = null;
+      pageBody.innerHTML = renderTapGame();
+    }, 900);
+  }
 }
 
 // --- Runtime config (heading, level, lang, gender) — fetched from
@@ -1859,6 +2023,7 @@ const ACTIVITY_ROUTES = new Set([
   "skrive-norsk", "skrive-ukrainsk", "skrive-engelsk",
   "skrive-storliten", "skrive-storliten-ua",
   "tall", "gange",
+  "naturfag-kroppen", "naturfag-folelser",
   "trening-read",
   "jobb",
 ]);
@@ -2098,6 +2263,10 @@ pageBody.addEventListener("pointerup", (e) => {
   if (action === "skrive-k") {
     const k = e.target.closest("[data-k]")?.dataset?.k;
     if (k) return writeKey(k);
+  }
+  if (action === "tap-pick") {
+    const id = e.target.closest("[data-id]")?.dataset?.id;
+    if (id) return tapPick(id);
   }
   if (action === "storliten-check") return caseMatchCheck();
   if (action === "storliten-next")  return caseMatchNext();
