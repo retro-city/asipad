@@ -25,7 +25,8 @@ sync_files() {
   rsync -avz --delete \
     --exclude='.git/' \
     --exclude='__pycache__/' \
-    --exclude='.venv/' \
+    --exclude='.venv*/' \
+    --exclude='.claude/' \
     --exclude='.DS_Store' \
     --exclude='data/' \
     "$HERE"/ "$HOST:$DEST/"
