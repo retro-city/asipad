@@ -1,0 +1,15 @@
+# Asipad: re-tag the Chalkboard Electronics HID Touchscreen as a touchscreen.
+#
+# The device's HID descriptor declares Usage(Pen) (Digitizer 0x02), so
+# hid-generic creates an input device exposing BTN_TOOL_PEN + ABS_PRESSURE
+# + ABS_TILT_X/Y. udev's 60-input-id.rules then tags it ID_INPUT_TABLET=1
+# and libinput exposes it via wp_tablet_v2 — which cog/WPE doesn't speak,
+# so finger taps never reach the kiosk page. Functionally the device IS a
+# single-touch touchscreen (BTN_TOUCH + ABS_X + ABS_Y are present), so we
+# override the tags here.
+#
+# Set ID_INPUT_TABLET="0" explicitly (not empty/unset): libinput reads
+# the string value, and the Pi 4 deployment proved this exact form works
+# for the same touchscreen.
+ACTION=="add|change", KERNEL=="event[0-9]*", ENV{ID_VENDOR_ID}=="04d8", \
+ENV{ID_MODEL_ID}=="f723", ENV{ID_INPUT_TOUCHSCREEN}="1", ENV{ID_INPUT_TABLET}="0"

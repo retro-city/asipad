@@ -113,6 +113,20 @@ if command -v update-alternatives >/dev/null 2>&1 \
 fi
 sudo update-initramfs -u >/dev/null
 
+echo "==> udev rule for Chalkboard touchscreen (Armbian/rk35xx tags it as a pen tablet by default)"
+sudo install -m 0644 deploy/udev/99-asipad-chalkboard-touch.rules \
+  /etc/udev/rules.d/99-asipad-chalkboard-touch.rules
+sudo udevadm control --reload
+# Re-tag the device live so a `setup` run fixes touch without a reboot.
+# Rebinding hid-generic forces udev to re-evaluate ID_INPUT_* tags, which
+# is what libinput reads at device probe.
+HID_DEV=$(basename /sys/bus/hid/devices/*04D8*F723* 2>/dev/null || true)
+if [ -n "$HID_DEV" ] && [ -e "/sys/bus/hid/drivers/hid-generic/$HID_DEV" ]; then
+  echo "$HID_DEV" | sudo tee /sys/bus/hid/drivers/hid-generic/unbind >/dev/null || true
+  sleep 0.3
+  echo "$HID_DEV" | sudo tee /sys/bus/hid/drivers/hid-generic/bind   >/dev/null || true
+fi
+
 echo "==> sudoers fragment"
 sed "s/__USER__/$KIOSK_USER/g" deploy/sudoers-kiosk \
   | sudo tee /etc/sudoers.d/asipad-kiosk > /dev/null
