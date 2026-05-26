@@ -21,7 +21,10 @@ sudo apt-get install -y --no-install-recommends \
   python3-flask python3-pil python3-icalendar python3-dateutil \
   fonts-noto-color-emoji \
   curl zram-tools labwc cog wvkbd unclutter ffmpeg \
-  plymouth plymouth-themes librsvg2-bin initramfs-tools
+  plymouth plymouth-themes librsvg2-bin initramfs-tools \
+  gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+  gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly \
+  gstreamer1.0-libav gstreamer1.0-alsa
 
 echo "==> zram swap (compressed RAM-backed swap, faster than SD)"
 # zram-tools enables a default zram swap device on boot. Sized at 50% of RAM

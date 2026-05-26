@@ -154,7 +154,7 @@
   "admin.pictures.hint": "Bildene vises i FRITID → BILDER på iPaden. Trykk × for å slette.",
   "admin.pictures.upload_label": "Last opp nytt bilde",
   "admin.section.gifs": "Lei film (FRITID)",
-  "admin.gifs.hint": "Filmene vises i FRITID → LEI FILM på iPaden. Hver film koster 9 mynter som standard og er låst opp i 3 minutter etter betaling. Sett pris til 0 for gratis. Konverter MP4-er til GIF på en kraftigere maskin før opplasting (se README). Maks 25 MB per fil.",
+  "admin.gifs.hint": "Filmene vises i FRITID → LEI FILM på iPaden. Last opp animerte GIF/WebP eller MP4/WebM/MOV. Hver film koster 9 mynter som standard og er låst opp i 3 minutter etter betaling. Sett pris til 0 for gratis. Maks 200 MB per fil.",
   "admin.gifs.upload_label": "Last opp ny film",
   "admin.choose_gif": "Velg film…",
   "admin.gifs.cost_label": "Pris (mynter)",

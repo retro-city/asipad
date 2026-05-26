@@ -154,7 +154,7 @@
   "admin.pictures.hint": "These pictures appear under FREE TIME → PICTURES on the tablet. Tap × to delete.",
   "admin.pictures.upload_label": "Upload new picture",
   "admin.section.gifs": "Rentals (Free time)",
-  "admin.gifs.hint": "Rentals appear under FREE TIME → RENT A MOVIE on the tablet. Each rental defaults to 9 coins and unlocks for 3 minutes after payment. Set the cost to 0 for free. Convert MP4s to GIF on a beefier machine before upload (see README). Max 25 MB per file.",
+  "admin.gifs.hint": "Rentals appear under FREE TIME → RENT A MOVIE on the tablet. Upload animated GIF/WebP or MP4/WebM/MOV. Each rental defaults to 9 coins and unlocks for 3 minutes after payment. Set the cost to 0 for free. Max 200 MB per file.",
   "admin.gifs.upload_label": "Upload new rental",
   "admin.choose_gif": "Choose movie…",
   "admin.gifs.cost_label": "Cost (coins)",

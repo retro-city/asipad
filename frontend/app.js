@@ -206,9 +206,11 @@ function shiftTreningPage(delta) {
   pageBody.innerHTML = treningReaderBody();
 }
 
-// --- GIF: animated-image gallery (paged → fullscreen overlay) ---
-// Plays cleanly on Pi Zero 2 W since it goes through the image
-// pipeline, not GStreamer. Mirrors BILDER pagination + overlay.
+// --- LEI FILM: paid rental gallery (paged → fullscreen overlay) ---
+// Accepts animated GIF/WebP (rendered via <img>) AND mp4/webm/mov/m4v
+// (rendered via <video>). The route stays "gif" for backward compat.
+// Mirrors BILDER pagination + overlay. Cost/unlock mechanics apply
+// to both kinds the same way.
 
 const GIF_PAGE_SIZE = 6;
 let gifItems = [];
@@ -244,9 +246,10 @@ function renderGifPage() {
     const g = items[i];
     if (g) {
       // Use the static first-frame poster on the tile so the gallery
-      // doesn't run six simultaneous GIF animations. Full-screen view
-      // (openGif) still loads the animated source.
-      const thumb = g.poster_url || g.url;
+      // doesn't run six simultaneous animations. Full-screen view
+      // (openGif) still loads the live source. For videos without a
+      // poster (ffmpeg unavailable), fall back to <video preload=
+      // "metadata"> which lets WebKit render a single frame cheaply.
       const cost = Number(g.cost ?? 0);
       const unlocked = isGifUnlocked(g.id);
       const showPrice = cost > 0 && !unlocked;
@@ -254,7 +257,12 @@ function renderGifPage() {
       const overlay = showPrice
         ? `<div class="rental-price">${cost} 🪙</div>`
         : (cost > 0 && unlocked ? `<div class="rental-unlocked">✓</div>` : "");
-      cells.push(`<button class="${tileClass}" data-action="gif-open" data-gif-id="${g.id}"><img src="${thumb}" alt="">${overlay}</button>`);
+      const media = g.poster_url
+        ? `<img src="${g.poster_url}" alt="">`
+        : g.kind === "video"
+          ? `<video src="${g.url}#t=0.5" preload="metadata" muted playsinline></video>`
+          : `<img src="${g.url}" alt="">`;
+      cells.push(`<button class="${tileClass}" data-action="gif-open" data-gif-id="${g.id}">${media}${overlay}</button>`);
     } else {
       cells.push(`<div class="bg-tile empty"></div>`);
     }
@@ -292,13 +300,26 @@ async function openGif(id) {
   }
   const overlay = document.createElement("div");
   overlay.className = "bilder-overlay";
-  // Free gifs (cost === 0) stay open until the user dismisses; paid
+  // Free rentals (cost === 0) stay open until the user dismisses; paid
   // rentals get an MM:SS countdown that auto-closes when it hits 0.
   const showTimer = cost > 0;
-  overlay.innerHTML = `<img class="bilder-full" src="${item.url}" alt="">
+  const poster = item.poster_url ? ` poster="${item.poster_url}"` : "";
+  const media = item.kind === "video"
+    ? `<video class="bilder-full" src="${item.url}"${poster} autoplay controls playsinline loop></video>`
+    : `<img class="bilder-full" src="${item.url}" alt="">`;
+  overlay.innerHTML = `${media}
     ${showTimer ? `<div class="rental-timer">--:--</div>` : ""}
     <button class="bilder-close" type="button" aria-label="Close">×</button>`;
-  overlay.addEventListener("pointerup", () => overlay.remove());
+  // Tap-anywhere-to-close on images; on videos, only the X closes (so
+  // taps on the playback bar / video surface don't dismiss the rental).
+  if (item.kind === "video") {
+    overlay.querySelector(".bilder-close").addEventListener("pointerup", () => {
+      overlay.querySelector("video")?.pause();
+      overlay.remove();
+    });
+  } else {
+    overlay.addEventListener("pointerup", () => overlay.remove());
+  }
   document.body.appendChild(overlay);
 
   if (showTimer) {

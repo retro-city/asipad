@@ -162,18 +162,18 @@
     </section>
 
     <section>
-      <h2 data-i18n="admin.section.gifs">GIF-er (FRITID)</h2>
-      <p class="hint" data-i18n="admin.gifs.hint">GIF-er vises i FRITID → ANIMASJONER på iPaden. Konverter MP4-er til GIF på en kraftigere maskin før opplasting (se README). Maks 25 MB per fil.</p>
+      <h2 data-i18n="admin.section.gifs">Lei film (FRITID)</h2>
+      <p class="hint" data-i18n="admin.gifs.hint">Filmene vises i FRITID → LEI FILM på iPaden. Last opp animerte GIF/WebP eller MP4/WebM/MOV. Hver film koster 9 mynter som standard og er låst opp i 3 minutter etter betaling. Sett pris til 0 for gratis. Maks 200 MB per fil.</p>
 
       <div class="bg-library" id="gifs-library">
         <p class="empty" data-i18n="common.loading">Laster…</p>
       </div>
 
-      <h3 data-i18n="admin.gifs.upload_label">Last opp ny GIF</h3>
+      <h3 data-i18n="admin.gifs.upload_label">Last opp ny film</h3>
       <form id="gif-upload-form">
         <label class="file-input">
-          <input type="file" id="gif-file" name="file" accept="image/gif,image/webp" required>
-          <span id="gif-file-label" data-i18n="admin.choose_gif">Velg GIF…</span>
+          <input type="file" id="gif-file" name="file" accept="image/gif,image/webp,video/mp4,video/webm,video/quicktime,video/x-m4v" required>
+          <span id="gif-file-label" data-i18n="admin.choose_gif">Velg fil…</span>
         </label>
         <button type="submit" data-i18n="admin.upload_button">Last opp</button>
       </form>

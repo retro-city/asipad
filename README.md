@@ -110,28 +110,32 @@ Override with `ASIPAD_ALLOWED_CIDRS` (comma-separated) in the
 range, or set `ASIPAD_ALLOW_ALL=1` during local development to disable
 the check entirely.
 
-## Animation content (converting MP4 → GIF)
+## Rental media (MP4 + GIF)
 
-The kiosk renders animated content via the **GIF gallery** under
-`FRITID → ANIMASJONER` and via per-page media in `FRITID → TRENING`.
-Both use animated GIF (and animated WebP) loaded with `<img>`, which
-goes through WebKit's image decoder rather than the GStreamer media
-pipeline. This is the only path that plays smoothly on a Pi Zero 2 W:
-H.264/H.265 video under WPE-WebKit can't keep up under software decode.
+The kiosk's "rental" gallery lives at `FRITID → LEI FILM` (a paid section
+where each clip costs coins and unlocks for a few minutes). It accepts
+two kinds of files:
 
-**Convert source clips on a desktop, not on the Pi.** ffmpeg on the Pi
-itself works but is painfully slow on Zero-class hardware and competes
-with the kiosk for RAM. Run these on your laptop/desktop instead:
+- **Animated GIF / animated WebP** — rendered with `<img>`, decoded in
+  WebKit's image pipeline (LZW + indexed color, no DCT). Cheap to play
+  even on weak hardware.
+- **MP4 / WebM / MOV / M4V** — rendered with `<video>`, decoded by WPE's
+  GStreamer playbin. On the current Rock 2F / Mali-450 stack this is
+  fine; on a Pi Zero 2 W it stalled, which is why this section used to
+  be GIF-only.
+
+Upload either kind via the admin panel
+(`http://asipad:8080/admin` → "Lei film"). Max 200 MB per file. ffmpeg
+on the device extracts a single-frame poster from MP4 uploads on the
+fly so the gallery tile renders as a still until the user pays.
+
+If you ever need to flash this onto weaker hardware, convert MP4 clips
+to animated GIF on a desktop before upload:
 
 ```sh
 # 480p, 12 fps, looping, decent size/quality balance (~1–4 MB for short clips)
 ffmpeg -i input.mp4 \
   -vf "fps=12,scale=480:-1:flags=lanczos" \
-  -loop 0 output.gif
-
-# Smaller / faster: 320p, 10 fps
-ffmpeg -i input.mp4 \
-  -vf "fps=10,scale=320:-1:flags=lanczos" \
   -loop 0 output.gif
 
 # Higher-quality two-pass with custom palette (slower, larger, but no banding):
@@ -140,21 +144,6 @@ ffmpeg -i input.mp4 -i palette.png \
   -lavfi "fps=12,scale=480:-1:flags=lanczos[x];[x][1:v]paletteuse" \
   -loop 0 output.gif
 ```
-
-Aim for **under ~25 MB** per clip. Upload via the admin panel
-(`http://asipad:8080/admin` → "GIF-er (FRITID)" or the per-page picker
-inside the training editor). Animated WebP is also accepted and
-typically smaller than GIF for the same content.
-
-> **Why not play the MP4 directly?** Animated GIFs decode in the
-> browser's image pipeline (LZW + indexed color, no DCT / motion
-> compensation), so a single Pi Zero 2 W core handles them with room
-> to spare. MP4 / H.264 needs WPE's GStreamer playbin, which falls
-> back to software decode for anything beyond 720p baseline and
-> stalls on phone-recorded clips. The video infrastructure is left in
-> the codebase (server endpoints, frontend handlers) for future Pi
-> hardware that can decode H.264 in HW; the FRITID menu and admin
-> simply hide it for now.
 
 ## Customising tiles, calendar, etc.
 

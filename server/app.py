@@ -535,15 +535,20 @@ def admin_delete_picture():
     return jsonify(ok=True)
 
 
-# --- GIF: animated-image gallery (FRITID/GIF) ---
-# Goes through WebKit's image pipeline (no GStreamer), so it actually
-# plays smoothly on a Pi Zero 2 W. Source clips should be converted to
-# GIF on a desktop before upload — see README.
+# --- LEI FILM: paid rental gallery (FRITID/GIF) ---
+# Accepts animated images (gif/webp, played as <img> via WebKit's image
+# pipeline) AND short video clips (mp4/webm/mov/m4v, played as <video>).
+# The route stays "gif" for backward compat, but the section serves both.
+# Pi Zero 2 W couldn't decode H.264 under WPE — videos work fine on the
+# current hardware (Rock 2F / Mali-450 / lima), and gracefully fall back
+# to image-only if you ever flash this onto weaker hardware.
 
 GIFS_DIR = DATA / "gifs"
 GIFS_DIR.mkdir(exist_ok=True)
-ALLOWED_GIF = {".gif", ".webp"}
-MAX_GIF_BYTES = 25 * 1024 * 1024  # 25 MiB per gif
+ALLOWED_GIF_IMAGE = {".gif", ".webp"}
+ALLOWED_GIF_VIDEO = {".mp4", ".webm", ".mov", ".m4v"}
+ALLOWED_GIF = ALLOWED_GIF_IMAGE | ALLOWED_GIF_VIDEO
+MAX_GIF_BYTES = 200 * 1024 * 1024  # 200 MiB — covers both GIFs and MP4 rentals
 
 
 def list_gifs():
@@ -588,11 +593,13 @@ def api_gifs():
     items = []
     for f in list_gifs():
         mtime = int(f.stat().st_mtime)
+        kind = "video" if f.suffix.lower() in ALLOWED_GIF_VIDEO else "image"
         item = {
             "id": f.name,
             "url": f"/api/gifs/{f.name}?v={mtime}",
             "mtime": mtime,
             "cost": gif_cost_for(f.name, costs),
+            "kind": kind,
         }
         poster = f.with_suffix(".jpg")
         if poster.is_file():
@@ -651,7 +658,10 @@ def admin_upload_gif():
         target.unlink()
         return jsonify(error="file too large"), 413
     poster = target.with_suffix(".jpg")
-    poster_ok = _generate_gif_poster(target, poster)
+    if ext in ALLOWED_GIF_VIDEO:
+        poster_ok = _generate_video_poster(target, poster)
+    else:
+        poster_ok = _generate_gif_poster(target, poster)
     return jsonify(
         ok=True, id=name, bytes=size,
         poster_url=f"/api/gifs/{poster.name}" if poster_ok else None,
