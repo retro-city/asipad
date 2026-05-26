@@ -25,7 +25,12 @@ LABWC_PID=$(pidof labwc | awk '{print $1}')
       curl -fsS http://127.0.0.1:8080/api/health >/dev/null 2>&1 && break
       sleep 0.5
     done
-    cog http://127.0.0.1:8080/ &
+    # --bg-color=black so the pre-render surface AND the unfilled area
+    # outside cog's pre-fullscreen window both blend into the same black
+    # backdrop. Without this, cog defaults to white and you see a white
+    # square plus a black strip during the brief gap between window
+    # mapping and labwc applying its ToggleFullscreen rule.
+    cog --bg-color=black http://127.0.0.1:8080/ &
     COG_PID=$!
     while [ -e "/proc/$LABWC_PID" ] && [ -e "/proc/$COG_PID" ]; do
       sleep 0.5

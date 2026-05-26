@@ -66,15 +66,21 @@ if [[ -f "$CMDLINE" ]]; then
 fi
 
 # Armbian (Rock 2F etc.): the kernel cmdline is built by u-boot from
-# /boot/armbianEnv.txt. We want verbosity=0 so the boot script emits
-# "quiet splash" instead of "splash=verbose", and extraargs for the
-# kiosk-specific cursor/serial-console tweaks.
+# /boot/armbianEnv.txt. We want verbosity=0 + bootlogo=true so the boot
+# script emits "splash plymouth.ignore-serial-consoles" (silent splash
+# with the Plymouth logo) instead of "splash=verbose" (scrolling kernel
+# text). Despite the name, bootlogo=true is Armbian's "use Plymouth"
+# toggle — bootlogo=false keeps the verbose console output.
 ARMBIAN_ENV=/boot/armbianEnv.txt
 if [[ -f "$ARMBIAN_ENV" ]]; then
-  echo "==> $ARMBIAN_ENV — verbosity=0 + Plymouth-friendly extraargs"
+  echo "==> $ARMBIAN_ENV — verbosity=0 + bootlogo=true + Plymouth-friendly extraargs"
   sudo sed -i -E 's/^verbosity=.*/verbosity=0/' "$ARMBIAN_ENV"
   if ! grep -q '^verbosity=' "$ARMBIAN_ENV"; then
     echo 'verbosity=0' | sudo tee -a "$ARMBIAN_ENV" >/dev/null
+  fi
+  sudo sed -i -E 's/^bootlogo=.*/bootlogo=true/' "$ARMBIAN_ENV"
+  if ! grep -q '^bootlogo=' "$ARMBIAN_ENV"; then
+    echo 'bootlogo=true' | sudo tee -a "$ARMBIAN_ENV" >/dev/null
   fi
   EXTRA='plymouth.ignore-serial-consoles vt.global_cursor_default=0 logo.nologo'
   if grep -q '^extraargs=' "$ARMBIAN_ENV"; then
