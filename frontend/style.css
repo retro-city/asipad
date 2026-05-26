@@ -26,7 +26,8 @@ html, body {
    here flips it so 🐱 and ❤️ render in color. */
 .skrive-image,
 .story-flag,
-.tile-icon-emoji {
+.tile-icon-emoji,
+.tap-emoji {
   font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji",
                "Twemoji Mozilla", emoji,
                -apple-system, system-ui, sans-serif;
