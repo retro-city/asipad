@@ -1490,11 +1490,14 @@ function writeCorrectFeedback() {
   return WRITE_LANGS[writeMode].feedback.correct;
 }
 
+function levelRank(name = getLevel()) {
+  return name === "hard" ? 2 : name === "medium" ? 1 : 0;
+}
+
 function newWriteWord() {
-  const rank = (n) => n === "hard" ? 2 : n === "medium" ? 1 : 0;
-  const cur = rank(getLevel());
+  const cur = levelRank();
   const list = WRITE_LANGS[writeMode].words.filter(
-    (w) => !w.minLevel || cur >= rank(w.minLevel)
+    (w) => !w.minLevel || cur >= levelRank(w.minLevel)
   );
   let next;
   for (let i = 0; i < 8; i++) {
@@ -1516,11 +1519,16 @@ function renderWrite() {
     writeState === "correct" ? writeCorrectFeedback() :
     writeState === "wrong"   ? WRITE_LANGS[writeMode].feedback.wrong : "";
 
+  // MEDIUM and up: once the first letter is placed, the keyboard drops to
+  // lower case so the word gets written the way it appears in a book —
+  // "Katt", not "KATT". EASY keeps the all-uppercase keyboard.
+  const lowered = levelRank() >= 1 && writeInput.length > 0;
   const layout = WRITE_LANGS[writeMode].kbd;
   const kbd = layout.map((row) =>
-    `<div class="osk-row">${row.map((k) =>
-      `<button class="osk-key ${oskClass(k)}" data-action="skrive-k" data-k="${k}">${k}</button>`
-    ).join("")}</div>`
+    `<div class="osk-row">${row.map((k) => {
+      const key = lowered ? k.toLowerCase() : k;
+      return `<button class="osk-key ${oskClass(k)}" data-action="skrive-k" data-k="${key}">${key}</button>`;
+    }).join("")}</div>`
   ).join("") +
     `<div class="osk-row">
       <button class="osk-key osk-space" data-action="skrive-k" data-k=" ">space</button>
