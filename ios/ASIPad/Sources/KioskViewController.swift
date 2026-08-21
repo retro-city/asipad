@@ -20,6 +20,12 @@ final class KioskViewController: UIViewController, WKNavigationDelegate {
         // and autoplay after the coin spend — no tap-to-play chrome.
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
+        // iOS provides the keyboard; tell the frontend to keep its own
+        // Pi-era on-screen keyboard hidden (JOBB would show both).
+        config.userContentController.addUserScript(WKUserScript(
+            source: "window.__ASIPAD_NATIVE_OSK__ = true;",
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true))
 
         webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = self

@@ -2692,6 +2692,9 @@ function hideOsk() {
 }
 
 document.addEventListener("focusin", (e) => {
+  // The iPad app injects this flag: the platform brings its own keyboard,
+  // so the kiosk OSK (built for the Pi, which has none) must stay away.
+  if (window.__ASIPAD_NATIVE_OSK__) return;
   const t = e.target;
   if (t.tagName === "TEXTAREA" ||
       (t.tagName === "INPUT" && !["button","submit","checkbox","radio","file"].includes(t.type))) {
