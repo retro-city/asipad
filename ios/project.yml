@@ -1,0 +1,38 @@
+# xcodegen spec for the standalone iPad build of ASIPad.
+# Regenerate the Xcode project with:  cd ios && xcodegen
+#
+# The web frontend and assets are bundled as folder references straight from
+# the repo — no copies to keep in sync. ../data (gitignored, personal content)
+# is bundled too when present and used to seed the app's writable data dir on
+# first launch; a fresh clone without it just starts empty.
+name: ASIPad
+options:
+  bundleIdPrefix: com.waagbo
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "16.0"
+targets:
+  ASIPad:
+    type: application
+    platform: iOS
+    sources:
+      - path: ASIPad/Sources
+      - path: ../frontend
+        type: folder
+        buildPhase: resources
+      - path: ../assets
+        type: folder
+        buildPhase: resources
+      - path: ../data
+        type: folder
+        buildPhase: resources
+        optional: true
+    settings:
+      base:
+        TARGETED_DEVICE_FAMILY: "2"          # iPad only
+        SWIFT_VERSION: "5.9"
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: ASIPad/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.waagbo.asipad
+        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: "0.1.0"
