@@ -9,6 +9,10 @@ import WebKit
 final class KioskViewController: UIViewController, WKNavigationDelegate {
     private var webView: WKWebView!
     private var pendingURL: URL?
+    /// Points of the on-screen keyboard covering our window. The webview is
+    /// shrunk by this amount so the page (a 100vh flex layout) re-lays-out
+    /// into the visible area — JOBB's editor stays on screen while typing.
+    private var keyboardOverlap: CGFloat = 0
 
     override func loadView() {
         let config = WKWebViewConfiguration()
@@ -28,7 +32,46 @@ final class KioskViewController: UIViewController, WKNavigationDelegate {
         webView.scrollView.bounces = false
         webView.scrollView.isScrollEnabled = false
         webView.scrollView.contentInsetAdjustmentBehavior = .never
-        view = webView
+
+        // Container instead of `view = webView` so the webview's frame can
+        // track the keyboard without fighting UIKit over the root view.
+        let container = UIView()
+        container.backgroundColor = .black
+        container.addSubview(webView)
+        view = container
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        let center = NotificationCenter.default
+        center.addObserver(self, selector: #selector(keyboardWillChange(_:)),
+                           name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
+        center.addObserver(self, selector: #selector(keyboardWillHide(_:)),
+                           name: UIResponder.keyboardWillHideNotification, object: nil)
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        var frame = view.bounds
+        frame.size.height = max(0, frame.height - keyboardOverlap)
+        if webView.frame != frame { webView.frame = frame }
+    }
+
+    @objc private func keyboardWillChange(_ note: Notification) {
+        guard let end = (note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue
+        else { return }
+        // Convert from screen coordinates; a dismissed/undocked keyboard ends
+        // up below the view and yields zero overlap.
+        let endInView = view.convert(end, from: nil)
+        keyboardOverlap = max(0, view.bounds.maxY - endInView.minY)
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+    }
+
+    @objc private func keyboardWillHide(_ note: Notification) {
+        keyboardOverlap = 0
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
     }
 
     override var prefersStatusBarHidden: Bool { true }

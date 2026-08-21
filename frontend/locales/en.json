@@ -187,5 +187,7 @@
   "admin.help.live": "The active background appears on the tablet within seconds.",
   "admin.help.marker": "The active background is outlined in orange.",
   "page.adult": "Adult",
-  "admin.back": "← Back to ASIPad"
+  "admin.back": "← Back to ASIPad",
+  "admin.time.restore_label": "Restore time after a break (hours)",
+  "admin.time.restore_hint": "If set, the activity time refills to the budget once ASIPad has been unused for this many hours. 0 = off."
 }

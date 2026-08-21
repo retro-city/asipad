@@ -731,6 +731,12 @@ final class Router {
             }
             cfg["time_budget_minutes"] = m
         }
+        if body["time_restore_hours"] != nil {
+            guard let h = intValue(body["time_restore_hours"]), (0...168).contains(h) else {
+                return .error("bad time_restore_hours", status: 400)
+            }
+            cfg["time_restore_hours"] = h
+        }
         if body["time_extension_pattern"] != nil {
             guard let list = body["time_extension_pattern"] as? [String], list.count == 6,
                   list.allSatisfy({ DataStore.lockColors.contains($0) }) else {

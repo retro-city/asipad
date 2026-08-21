@@ -2052,6 +2052,9 @@ const ACTIVITY_ROUTES = new Set([
   "jobb",
 ]);
 const TIME_REMAINING_KEY = "asipad_time_remaining";
+// localStorage (not session) — the "restore after a break" check must survive
+// a browser/app restart, which is exactly when a long break tends to happen.
+const TIME_LAST_USED_KEY = "asipad_time_last_used";
 let timeRemaining = null; // seconds; null until first sync
 let timeInterval = null;
 
@@ -2068,6 +2071,24 @@ function timerBudgetSeconds() {
   return Number(kioskConfig.time_budget_minutes || 0) * 60;
 }
 
+function timeRestoreHours() {
+  return Number(kioskConfig.time_restore_hours || 0);
+}
+
+// "Restore activity time after a break": if the timer hasn't ticked for the
+// configured number of hours, refill to the full budget. Checked on init and
+// on every navigation, so a kiosk that stays running for days still restores.
+function maybeRestoreTime() {
+  const hours = timeRestoreHours();
+  if (!timerEnabled() || hours <= 0) return;
+  const last = parseInt(localStorage.getItem(TIME_LAST_USED_KEY) ?? "", 10);
+  if (!Number.isFinite(last)) return;
+  if (Date.now() - last >= hours * 3600 * 1000) {
+    timeRemaining = timerBudgetSeconds();
+    persistTimeRemaining();
+  }
+}
+
 function initTimeRemaining() {
   if (!timerEnabled()) { timeRemaining = null; return; }
   const stored = parseInt(sessionStorage.getItem(TIME_REMAINING_KEY) ?? "", 10);
@@ -2077,11 +2098,13 @@ function initTimeRemaining() {
     timeRemaining = timerBudgetSeconds();
     sessionStorage.setItem(TIME_REMAINING_KEY, String(timeRemaining));
   }
+  maybeRestoreTime();
 }
 
 function persistTimeRemaining() {
   if (timeRemaining !== null) {
     sessionStorage.setItem(TIME_REMAINING_KEY, String(timeRemaining));
+    try { localStorage.setItem(TIME_LAST_USED_KEY, String(Date.now())); } catch (_) {}
   }
 }
 
@@ -2129,6 +2152,7 @@ function stopTimerInterval()  { if (timeInterval) { clearInterval(timeInterval);
 function syncTimerForRoute() {
   if (!timerEnabled()) { stopTimerInterval(); renderTimerEl(); return; }
   if (timeRemaining === null) initTimeRemaining();
+  else maybeRestoreTime();
   renderTimerEl();
   if (isActivityRoute(location.hash)) {
     if (timeRemaining <= 0) {

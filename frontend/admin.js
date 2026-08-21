@@ -710,6 +710,8 @@ loadLockPattern();
 const TIME_PATTERN_DEFAULT = ["red", "green", "blue", "blue", "green", "red"];
 const timeBudgetForm   = document.getElementById("time-budget-form");
 const timeBudgetInput  = document.getElementById("time-budget-input");
+const timeRestoreForm  = document.getElementById("time-restore-form");
+const timeRestoreInput = document.getElementById("time-restore-input");
 const timeOptionsForm  = document.getElementById("time-options-form");
 const timeOptInputs    = [
   document.getElementById("time-opt-1"),
@@ -758,6 +760,7 @@ async function loadTimeSettings() {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const cfg = await r.json();
     if (timeBudgetInput) timeBudgetInput.value = Number(cfg.time_budget_minutes ?? 15);
+    if (timeRestoreInput) timeRestoreInput.value = Number(cfg.time_restore_hours ?? 0);
     const opts = Array.isArray(cfg.time_extension_options) ? cfg.time_extension_options : [10, 15, 20];
     timeOptInputs.forEach((inp, i) => { if (inp) inp.value = Number(opts[i] ?? 0); });
     const pat = Array.isArray(cfg.time_extension_pattern) && cfg.time_extension_pattern.length === 6
@@ -783,6 +786,20 @@ if (timeBudgetForm) {
     setTimeStatus("Lagrer…");
     const ok = await postConfigField("time_budget_minutes", m);
     if (ok) setTimeStatus("Budsjett lagret.", "ok");
+  });
+}
+
+if (timeRestoreForm) {
+  timeRestoreForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const h = parseInt(timeRestoreInput.value, 10);
+    if (!Number.isFinite(h) || h < 0 || h > 168) {
+      setTimeStatus("Ugyldig verdi (0-168 timer).", "err");
+      return;
+    }
+    setTimeStatus("Lagrer…");
+    const ok = await postConfigField("time_restore_hours", h);
+    if (ok) setTimeStatus("Gjenoppretting lagret.", "ok");
   });
 }
 

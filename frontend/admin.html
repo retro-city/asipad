@@ -104,6 +104,13 @@
         <button type="submit" data-i18n="common.save">Lagre</button>
       </form>
 
+      <h3 data-i18n="admin.time.restore_label">Gjenopprett tid etter pause (timer)</h3>
+      <p class="hint" data-i18n="admin.time.restore_hint">Hvis satt, fylles aktivitetstiden opp igjen til budsjettet når ASIPad ikke har vært i bruk på så mange timer. 0 = av.</p>
+      <form id="time-restore-form" class="heading-form">
+        <input id="time-restore-input" type="number" min="0" max="168" step="1">
+        <button type="submit" data-i18n="common.save">Lagre</button>
+      </form>
+
       <h3 data-i18n="admin.time.options_label">Tilleggsvalg (minutter)</h3>
       <form id="time-options-form" class="heading-form">
         <input id="time-opt-1" type="number" min="1" max="120" step="1">

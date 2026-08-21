@@ -67,7 +67,7 @@ main#app { position: relative; z-index: 1; }
 header {
   display: flex;
   align-items: center;
-  gap: 3vw;
+  gap: calc(3vw + 20px);
   flex: 0 0 auto;
 }
 
@@ -250,8 +250,11 @@ header h1 {
 /* Activity timer chip (top-right; only visible on activity pages) -- */
 #activity-timer {
   position: fixed;
-  top: 1.8vh;
-  right: 18vw; /* leave room for power-trigger + (when shown) lock-trigger */
+  /* Same offsets as the .view padding so the chip sits on the header line,
+     mirroring the logo/TILBAKE button on the left. Ends just before the
+     lock-trigger zone (right: 10vw..20vw). */
+  top: 3vw;
+  right: 4vw;
   z-index: 900;
   padding: 0.6vh 1.4vw;
   border-radius: 1.6vw;
@@ -1214,8 +1217,12 @@ body.osk-open .view { padding-bottom: 34vh; }
 }
 
 .math-board {
-  flex: 2;
+  /* Hard percentage split instead of flex ratios: WebKit on the iPad gave
+     the pad a wider share than Blink/the Pi did, pushing the keypad's right
+     column (9/6/3/=) off-screen. Percentages can't drift between engines. */
+  flex: 0 0 64%;
   min-width: 0;
+  overflow: hidden;
   background: rgba(0, 0, 0, 0.25);
   border-radius: 1.5vw;
   display: flex;
@@ -1275,7 +1282,7 @@ body.osk-open .view { padding-bottom: 34vh; }
 .math-board.wrong   .math-feedback { color: var(--danger); }
 
 .math-pad {
-  flex: 1;
+  flex: 1 1 auto;   /* whatever remains after the board + gap — never wider */
   min-width: 0;
   display: grid;
   grid-template-columns: repeat(3, 1fr);

@@ -28,6 +28,7 @@ final class DataStore {
         "time_budget_minutes": 15,
         "time_extension_pattern": ["red", "green", "blue", "blue", "green", "red"],
         "time_extension_options": [10, 15, 20],
+        "time_restore_hours": 0,  // 0 = off; >0 → refill budget after that many idle hours
     ]
 
     let fm = FileManager.default

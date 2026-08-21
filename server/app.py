@@ -56,6 +56,7 @@ DEFAULT_CONFIG = {
     "time_budget_minutes": 15,
     "time_extension_pattern": ["red", "green", "blue", "blue", "green", "red"],
     "time_extension_options": [10, 15, 20],
+    "time_restore_hours": 0,  # 0 = off; >0 → refill budget after that many idle hours
 }
 LEVEL_VALUES = ("easy", "medium", "hard")
 GENDER_VALUES = ("male", "female")
@@ -1509,6 +1510,14 @@ def api_set_config():
         if m < 0 or m > 720:
             return jsonify(error="bad time_budget_minutes"), 400
         cfg["time_budget_minutes"] = m
+    if "time_restore_hours" in body:
+        try:
+            h = int(body.get("time_restore_hours"))
+        except (TypeError, ValueError):
+            return jsonify(error="bad time_restore_hours"), 400
+        if h < 0 or h > 168:
+            return jsonify(error="bad time_restore_hours"), 400
+        cfg["time_restore_hours"] = h
     if "time_extension_pattern" in body:
         raw = body.get("time_extension_pattern")
         if (isinstance(raw, list)

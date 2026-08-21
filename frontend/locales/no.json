@@ -187,5 +187,7 @@
   "admin.help.live": "Aktiv bakgrunn vises på iPaden innen noen sekunder.",
   "admin.help.marker": "Den aktive bakgrunnen er markert med oransje ramme.",
   "page.adult": "Voksen",
-  "admin.back": "← Tilbake til ASIPad"
+  "admin.back": "← Tilbake til ASIPad",
+  "admin.time.restore_label": "Gjenopprett tid etter pause (timer)",
+  "admin.time.restore_hint": "Hvis satt, fylles aktivitetstiden opp igjen til budsjettet når ASIPad ikke har vært i bruk på så mange timer. 0 = av."
 }
