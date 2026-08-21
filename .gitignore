@@ -6,3 +6,5 @@ __pycache__/
 data/
 # Local deploy overrides (personal usernames/hostnames stay out of git).
 .deploy.env
+# Claude Code local settings/worktrees (personal, never deployed).
+.claude/
