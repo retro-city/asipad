@@ -6,6 +6,12 @@
 # is bundled too when present and used to seed the app's writable data dir on
 # first launch; a fresh clone without it just starts empty.
 name: ASIPad
+include:
+  # Personal signing (DEVELOPMENT_TEAM) lives in gitignored signing.yml —
+  # same convention as .deploy.env. Simulator builds work without it.
+  - path: signing.yml
+    enable: true
+    optional: true
 options:
   bundleIdPrefix: com.waagbo
   createIntermediateGroups: true
@@ -27,9 +33,19 @@ targets:
         type: folder
         buildPhase: resources
         optional: true
+    postBuildScripts:
+      # The repo lives under ~/Documents, so iCloud stamps Finder/file-provider
+      # xattrs onto everything the resource phase copies — and codesign then
+      # rejects the bundle ("resource fork ... not allowed"). Strip them (and
+      # stray .DS_Store) before signing. Runs before codesign despite the name.
+      - name: Strip xattrs from bundled resources
+        script: |
+          xattr -cr "$CODESIGNING_FOLDER_PATH"
+          find "$CODESIGNING_FOLDER_PATH" -name .DS_Store -delete
     settings:
       base:
         TARGETED_DEVICE_FAMILY: "2"          # iPad only
+        CODE_SIGN_STYLE: Automatic
         SWIFT_VERSION: "5.9"
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: ASIPad/Info.plist

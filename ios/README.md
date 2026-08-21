@@ -27,6 +27,31 @@ open ASIPad.xcodeproj   # or xcodebuild -scheme ASIPad -destination 'platform=iO
 Requires full Xcode (not just Command Line Tools) with the iOS platform
 installed.
 
+### Installing on a real iPad
+
+1. Add your Apple ID in Xcode → Settings → Accounts, and put your team ID in
+   a gitignored `ios/signing.yml` (see the optional include in `project.yml`).
+2. Cable the iPad, trust the Mac, enable Developer Mode
+   (Settings → Privacy & Security, toggle → restart → confirm).
+3. Build and install:
+
+   ```sh
+   xcodebuild -project ASIPad.xcodeproj -scheme ASIPad -configuration Release \
+     -destination 'platform=iOS,name=<device name>' \
+     -derivedDataPath ~/Library/Developer/Xcode/DerivedData/ASIPad-manual \
+     -allowProvisioningUpdates build
+   xcrun devicectl device install app --device <udid> \
+     ~/Library/Developer/Xcode/DerivedData/ASIPad-manual/Build/Products/Release-iphoneos/ASIPad.app
+   ```
+
+   Keep DerivedData **outside** the repo if the repo lives under `~/Documents`:
+   iCloud stamps xattrs onto build products there and codesign then fails with
+   "resource fork, Finder information, or similar detritus not allowed".
+   (The strip-xattrs build phase handles the resource copies themselves.)
+
+On the iPad, pin the app with Guided Access (Settings → Accessibility) for a
+proper no-escape kiosk.
+
 ## Data
 
 - The repo's `frontend/` and `assets/` are bundled as folder references.
