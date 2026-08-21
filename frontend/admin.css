@@ -18,6 +18,19 @@ main {
 }
 
 h1 { margin: 0 0 0.5rem 0; font-size: 1.6rem; }
+
+/* Link back to the kiosk — used when the admin panel is opened on the
+   tablet itself (VALG → VOKSEN). */
+.admin-back {
+  align-self: flex-start;
+  color: #566180;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+  margin: -0.4rem 0 0 -0.8rem;
+  border-radius: 8px;
+}
+.admin-back:active, .admin-back:hover { background: #e7e9f2; }
 h2 { margin: 0 0 0.5rem 0; font-size: 1.15rem; }
 h3 { margin: 1.25rem 0 0.75rem 0; font-size: 1rem; font-weight: 600; }
 

@@ -1684,6 +1684,9 @@ async function loadEventsForCurrentDate() {
 const SETTINGS_TILES = [
   { route: "bakgrunn", titleKey: "page.background", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="M3 17l4-4 4 4 5-5 5 5"/></svg>' },
   { route: "lock",     titleKey: "page.lock",       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>' },
+  // Full navigation to the admin panel (not an SPA route) — the server asks
+  // for the admin password, so the tile is safe to show on the kid's grid.
+  { route: "voksen",   titleKey: "page.adult",      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.5" r="3.5"/><path d="M4.5 20.5c0-4 3.4-6.5 7.5-6.5s7.5 2.5 7.5 6.5"/></svg>' },
 ];
 
 const SETTINGS_PLACEHOLDER_ICON =
@@ -2323,6 +2326,7 @@ pageBody.addEventListener("pointerup", (e) => {
   if (action === "trening-prev") return shiftTreningPage(-1);
   if (action === "trening-next") return shiftTreningPage(1);
   const route = e.target?.closest?.("[data-route]")?.dataset?.route;
+  if (route === "voksen") { window.location.href = "/admin"; return; }
   if (route && PAGES[route]) return showPage(route);
   const bgId = e.target?.closest?.("[data-bg-id]")?.dataset?.bgId;
   if (bgId) return pickBackground(bgId);

@@ -206,7 +206,17 @@ final class Router {
             return serveFile(store.storyImgDir.appendingPathComponent(name))
         case ("POST", "api", "stories", "img", _) where n == 3:
             if let challenge = requireAdmin(req) { return challenge }
-            return .error("uploads not supported in the iPad app yet", status: 501)
+            guard let file = uploadedFile(req) else { return .error("missing file", status: 400) }
+            let ext = fileExt(file.filename)
+            guard DataStore.allowedBG.contains(ext) else {
+                return .error("extension .\(ext) not allowed", status: 400)
+            }
+            guard let data = MediaPipeline.normalizeImage(file.data) else {
+                return .error("could not process image", status: 400)
+            }
+            let name = "\(store.newID()).jpg"
+            try? data.write(to: store.storyImgDir.appendingPathComponent(name))
+            return .json(["ok": true, "name": name, "url": "/api/stories/img/\(name)"])
         case ("GET", "api", "stories", let sid, _) where n == 3:
             guard let p = numericJSONPath(sid, in: store.storiesDir), store.fm.fileExists(atPath: p.path)
             else { return .error("not found", status: 404) }
@@ -253,7 +263,42 @@ final class Router {
             return serveFile(store.trainingMediaDir.appendingPathComponent(name), range: req.byteRange)
         case ("POST", "api", "trainings", "media", _) where n == 3:
             if let challenge = requireAdmin(req) { return challenge }
-            return .error("uploads not supported in the iPad app yet", status: 501)
+            guard let file = uploadedFile(req) else { return .error("missing file", status: 400) }
+            let ext = fileExt(file.filename)
+            guard DataStore.allowedBG.contains(ext) || DataStore.allowedVideo.contains(ext) else {
+                return .error("extension .\(ext) not allowed", status: 400)
+            }
+            let name: String
+            var posterURL: String?
+            if DataStore.allowedVideo.contains(ext) {
+                // Save video as-is — no transcoding — but extract a poster so
+                // the gallery doesn't decode video metadata per tile.
+                name = "\(store.newID()).\(ext)"
+                let target = store.trainingMediaDir.appendingPathComponent(name)
+                guard file.data.count <= 200 * 1024 * 1024 else { return .error("file too large", status: 413) }
+                try? file.data.write(to: target)
+                if let poster = MediaPipeline.videoPoster(target) {
+                    let posterName = ((name as NSString).deletingPathExtension) + ".jpg"
+                    try? poster.write(to: store.trainingMediaDir.appendingPathComponent(posterName))
+                    posterURL = "/api/trainings/media/\(posterName)"
+                }
+            } else if ext == "gif" {
+                // Preserve animation; re-encode would flatten it.
+                guard file.data.count <= 16 * 1024 * 1024 else { return .error("file too large", status: 413) }
+                name = "\(store.newID()).gif"
+                try? file.data.write(to: store.trainingMediaDir.appendingPathComponent(name))
+            } else {
+                guard let data = MediaPipeline.normalizeImage(file.data) else {
+                    return .error("could not process image", status: 400)
+                }
+                name = "\(store.newID()).jpg"
+                try? data.write(to: store.trainingMediaDir.appendingPathComponent(name))
+            }
+            let kind = DataStore.allowedVideo.contains(ext) ? "video" : "image"
+            return .json(["ok": true, "name": name,
+                          "url": "/api/trainings/media/\(name)",
+                          "kind": kind,
+                          "poster_url": posterURL.map { $0 as Any } ?? NSNull()])
         case ("GET", "api", "trainings", let tid, _) where n == 3:
             guard let p = numericJSONPath(tid, in: store.trainingsDir), store.fm.fileExists(atPath: p.path)
             else { return .error("not found", status: 404) }
@@ -360,13 +405,80 @@ final class Router {
                         "icon": (ev["icon"] as? String) ?? "event"]
             })
 
-        // --- Admin multipart uploads: stage 2 ------------------------------
-        case ("POST", "admin", "background", _, _) where n == 2,
-             ("POST", "admin", "pictures", _, _) where n == 2,
-             ("POST", "admin", "gifs", _, _) where n == 2,
-             ("POST", "admin", "videos", _, _) where n == 2:
+        // --- Admin multipart uploads ---------------------------------------
+        case ("POST", "admin", "background", _, _) where n == 2:
             if let challenge = requireAdmin(req) { return challenge }
-            return .error("uploads not supported in the iPad app yet", status: 501)
+            guard let file = uploadedFile(req) else { return .error("missing file", status: 400) }
+            let ext = fileExt(file.filename)
+            guard DataStore.allowedBG.contains(ext) else {
+                return .error("extension .\(ext) not allowed", status: 400)
+            }
+            guard let data = MediaPipeline.normalizeImage(file.data) else {
+                return .error("could not process image", status: 400)
+            }
+            // Seconds, not ms — matches app.py's background naming.
+            let name = "\(Int(Date().timeIntervalSince1970)).jpg"
+            let target = store.bgDir.appendingPathComponent(name)
+            try? data.write(to: target)
+            try? name.write(to: store.currentBGFile, atomically: true, encoding: .utf8)
+            return .json(["ok": true, "version": store.mtime(target), "id": name, "bytes": data.count])
+
+        case ("POST", "admin", "pictures", _, _) where n == 2:
+            if let challenge = requireAdmin(req) { return challenge }
+            guard let file = uploadedFile(req) else { return .error("missing file", status: 400) }
+            let ext = fileExt(file.filename)
+            guard DataStore.allowedBG.contains(ext) else {
+                return .error("extension .\(ext) not allowed", status: 400)
+            }
+            guard let data = MediaPipeline.normalizeImage(file.data) else {
+                return .error("could not process image", status: 400)
+            }
+            let name = "\(store.newID()).jpg"
+            try? data.write(to: store.picturesDir.appendingPathComponent(name))
+            return .json(["ok": true, "id": name, "bytes": data.count])
+
+        case ("POST", "admin", "gifs", _, _) where n == 2:
+            if let challenge = requireAdmin(req) { return challenge }
+            guard let file = uploadedFile(req) else { return .error("missing file", status: 400) }
+            let ext = fileExt(file.filename)
+            guard DataStore.allowedGif.contains(ext) else {
+                return .error("extension .\(ext) not allowed", status: 400)
+            }
+            guard file.data.count <= 200 * 1024 * 1024 else { return .error("file too large", status: 413) }
+            let name = "\(store.newID()).\(ext)"
+            let target = store.gifsDir.appendingPathComponent(name)
+            try? file.data.write(to: target)
+            let poster = DataStore.allowedVideo.contains(ext)
+                ? MediaPipeline.videoPoster(target)
+                : MediaPipeline.gifPoster(file.data)
+            var posterURL: String?
+            if let poster = poster {
+                let posterName = ((name as NSString).deletingPathExtension) + ".jpg"
+                try? poster.write(to: store.gifsDir.appendingPathComponent(posterName))
+                posterURL = "/api/gifs/\(posterName)"
+            }
+            return .json(["ok": true, "id": name, "bytes": file.data.count,
+                          "poster_url": posterURL.map { $0 as Any } ?? NSNull()])
+
+        case ("POST", "admin", "videos", _, _) where n == 2:
+            if let challenge = requireAdmin(req) { return challenge }
+            guard let file = uploadedFile(req) else { return .error("missing file", status: 400) }
+            let ext = fileExt(file.filename)
+            guard DataStore.allowedVideo.contains(ext) else {
+                return .error("extension .\(ext) not allowed", status: 400)
+            }
+            guard file.data.count <= 200 * 1024 * 1024 else { return .error("file too large", status: 413) }
+            let name = "\(store.newID()).\(ext)"
+            let target = store.videosDir.appendingPathComponent(name)
+            try? file.data.write(to: target)
+            var posterURL: String?
+            if let poster = MediaPipeline.videoPoster(target) {
+                let posterName = ((name as NSString).deletingPathExtension) + ".jpg"
+                try? poster.write(to: store.videosDir.appendingPathComponent(posterName))
+                posterURL = "/api/videos/\(posterName)"
+            }
+            return .json(["ok": true, "id": name, "bytes": file.data.count,
+                          "poster_url": posterURL.map { $0 as Any } ?? NSNull()])
 
         // --- Static frontend fallback (admin.css, admin.js, vendor/…) ------
         default:
@@ -452,6 +564,16 @@ final class Router {
         var diff: UInt8 = 0
         for i in 0..<ab.count { diff |= ab[i] ^ bb[i] }
         return diff == 0
+    }
+
+    private func uploadedFile(_ req: HTTPRequest) -> Multipart.File? {
+        guard let file = Multipart.firstFile(contentType: req.headers["content-type"], body: req.body),
+              !file.filename.isEmpty else { return nil }
+        return file
+    }
+
+    private func fileExt(_ filename: String) -> String {
+        (filename as NSString).pathExtension.lowercased()
     }
 
     private func isSafeName(_ name: String) -> Bool {
@@ -546,7 +668,7 @@ final class Router {
                     "media": media ?? NSNull(),
                     "media_url": media.map { "/api/trainings/media/\($0)" } ?? NSNull(),
                     "media_kind": kind ?? NSNull(),
-                    "poster_url": posterURL ?? NSNull()]
+                    "poster_url": posterURL.map { $0 as Any } ?? NSNull()]
         }
         return ["id": url.deletingPathExtension().lastPathComponent,
                 "title": (d["title"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? "Uten tittel",

@@ -73,7 +73,6 @@
   "rent.cost_label": "Ціна",
   "video.empty": "Поки що немає відео. Додай в адмінці.",
   "trening.empty": "Поки що немає тренувань. Додай в адмінці.",
-
   "common.loading": "Завантаження…",
   "common.save": "Зберегти",
   "common.delete": "Видалити",
@@ -85,18 +84,15 @@
   "common.try_again": "Спробуй ще раз!",
   "common.good_job": "✓ Молодець!",
   "common.back": "← Назад",
-
   "power.prompt": "Що ти хочеш зробити?",
   "power.shutdown": "Вимкнути",
   "power.reboot": "Перезапустити",
-
   "lock.locked_title": "Заблоковано",
   "lock.try_again": "Спробуй ще раз",
   "lock.enter_pattern": "Введи кольори, щоб розблокувати",
   "time.add_more": "Додати ще часу",
   "time.unlock_instruction": "Введи код кольорів",
   "time.choose_title": "Скільки часу?",
-
   "read.empty": "Немає вибраних історій. Додай в адмінці.",
   "read.no_pages": "У цій історії немає сторінок.",
   "read.no_image": "Немає зображення",
@@ -105,12 +101,10 @@
   "read.prev_aria": "Попередня сторінка",
   "read.page_label_singular": "сторінка",
   "read.page_label_plural": "сторінок",
-
   "work.new_file": "+ Новий файл",
   "work.empty_picker": "Поки що немає файлів.",
   "work.title_placeholder": "Назва",
   "work.content_placeholder": "Пиши тут…",
-
   "write.norwegian.correct": "✓ Bra!",
   "write.norwegian.wrong": "Prøv igjen!",
   "write.english.correct": "✓ Good job!",
@@ -118,10 +112,8 @@
   "write.ukrainian.correct.male": "✓ Молодець!",
   "write.ukrainian.correct.female": "✓ Молодчинка!",
   "write.ukrainian.wrong": "Спробуй ще раз!",
-
   "calendar.next_aria": "Наступний день",
   "calendar.prev_aria": "Попередній день",
-
   "admin.title": "ASIPad Адміністрування",
   "admin.section.device": "Пристрій",
   "admin.section.lock": "Замок (3 кольори)",
@@ -193,5 +185,7 @@
   "admin.help.types": "Дозволені типи: JPG, PNG, WEBP, GIF. Максимум 16 МБ.",
   "admin.help.scaling": "Зображення масштабуються до 1280×720 і зберігаються як WebP.",
   "admin.help.live": "Активний фон з'являється на планшеті за кілька секунд.",
-  "admin.help.marker": "Активний фон обведено помаранчевою рамкою."
+  "admin.help.marker": "Активний фон обведено помаранчевою рамкою.",
+  "page.adult": "Дорослий",
+  "admin.back": "← Назад до ASIPad"
 }

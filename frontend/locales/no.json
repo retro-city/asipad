@@ -73,7 +73,6 @@
   "rent.cost_label": "Pris",
   "video.empty": "Ingen videoer enda. Last opp i admin.",
   "trening.empty": "Ingen treningsøkter enda. Legg til i admin.",
-
   "common.loading": "Laster…",
   "common.save": "Lagre",
   "common.delete": "Slett",
@@ -85,18 +84,15 @@
   "common.try_again": "Prøv igjen!",
   "common.good_job": "✓ Bra!",
   "common.back": "← Tilbake",
-
   "power.prompt": "Hva vil du gjøre?",
   "power.shutdown": "Slå av",
   "power.reboot": "Start på nytt",
-
   "lock.locked_title": "Låst",
   "lock.try_again": "Prøv igjen",
   "lock.enter_pattern": "Skriv inn fargene for å låse opp",
   "time.add_more": "Legg til mer tid",
   "time.unlock_instruction": "Skriv inn fargekoden",
   "time.choose_title": "Hvor mye tid?",
-
   "read.empty": "Ingen historier valgt enda. Legg til i admin.",
   "read.no_pages": "Historie mangler sider.",
   "read.no_image": "Ingen bilde",
@@ -105,12 +101,10 @@
   "read.prev_aria": "Forrige side",
   "read.page_label_singular": "side",
   "read.page_label_plural": "sider",
-
   "work.new_file": "+ Ny fil",
   "work.empty_picker": "Ingen filer enda.",
   "work.title_placeholder": "Tittel",
   "work.content_placeholder": "Skriv her…",
-
   "write.norwegian.correct": "✓ Bra!",
   "write.norwegian.wrong": "Prøv igjen!",
   "write.english.correct": "✓ Good job!",
@@ -118,10 +112,8 @@
   "write.ukrainian.correct.male": "✓ Молодець!",
   "write.ukrainian.correct.female": "✓ Молодчинка!",
   "write.ukrainian.wrong": "Спробуй ще раз!",
-
   "calendar.next_aria": "Neste dag",
   "calendar.prev_aria": "Forrige dag",
-
   "admin.title": "ASIPad Administration",
   "admin.section.device": "Apparattilpasning",
   "admin.section.lock": "Lås (3 farger)",
@@ -193,5 +185,7 @@
   "admin.help.types": "Tillatte filtyper: JPG, PNG, WEBP, GIF. Maks 16 MB per fil.",
   "admin.help.scaling": "Bilder skaleres automatisk til 1280×720 og lagres som WebP.",
   "admin.help.live": "Aktiv bakgrunn vises på iPaden innen noen sekunder.",
-  "admin.help.marker": "Den aktive bakgrunnen er markert med oransje ramme."
+  "admin.help.marker": "Den aktive bakgrunnen er markert med oransje ramme.",
+  "page.adult": "Voksen",
+  "admin.back": "← Tilbake til ASIPad"
 }

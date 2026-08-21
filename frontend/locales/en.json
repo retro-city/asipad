@@ -73,7 +73,6 @@
   "rent.cost_label": "Cost",
   "video.empty": "No videos yet. Upload in admin.",
   "trening.empty": "No training sessions yet. Add some in admin.",
-
   "common.loading": "Loading…",
   "common.save": "Save",
   "common.delete": "Delete",
@@ -85,18 +84,15 @@
   "common.try_again": "Try again!",
   "common.good_job": "✓ Good job!",
   "common.back": "← Back",
-
   "power.prompt": "What do you want to do?",
   "power.shutdown": "Shut down",
   "power.reboot": "Restart",
-
   "lock.locked_title": "Locked",
   "lock.try_again": "Try again",
   "lock.enter_pattern": "Enter the colors to unlock",
   "time.add_more": "Add more time",
   "time.unlock_instruction": "Enter the color code",
   "time.choose_title": "How much time?",
-
   "read.empty": "No stories chosen yet. Add some in admin.",
   "read.no_pages": "Story has no pages.",
   "read.no_image": "No image",
@@ -105,12 +101,10 @@
   "read.prev_aria": "Previous page",
   "read.page_label_singular": "page",
   "read.page_label_plural": "pages",
-
   "work.new_file": "+ New file",
   "work.empty_picker": "No files yet.",
   "work.title_placeholder": "Title",
   "work.content_placeholder": "Type here…",
-
   "write.norwegian.correct": "✓ Bra!",
   "write.norwegian.wrong": "Prøv igjen!",
   "write.english.correct": "✓ Good job!",
@@ -118,10 +112,8 @@
   "write.ukrainian.correct.male": "✓ Молодець!",
   "write.ukrainian.correct.female": "✓ Молодчинка!",
   "write.ukrainian.wrong": "Спробуй ще раз!",
-
   "calendar.next_aria": "Next day",
   "calendar.prev_aria": "Previous day",
-
   "admin.title": "ASIPad Administration",
   "admin.section.device": "Device",
   "admin.section.lock": "Lock (3 colors)",
@@ -193,5 +185,7 @@
   "admin.help.types": "Accepted file types: JPG, PNG, WEBP, GIF. Max 16 MB per file.",
   "admin.help.scaling": "Images are scaled to 1280×720 and stored as WebP.",
   "admin.help.live": "The active background appears on the tablet within seconds.",
-  "admin.help.marker": "The active background is outlined in orange."
+  "admin.help.marker": "The active background is outlined in orange.",
+  "page.adult": "Adult",
+  "admin.back": "← Back to ASIPad"
 }
